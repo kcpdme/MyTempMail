@@ -194,6 +194,19 @@ export function MailApp() {
             onRandomize={generate}
             onAddInbox={addAddress}
             onCompose={() => openComposer("compose")}
+            onLogout={
+              config.accessEnabled
+                ? () => {
+                    void fetch("/api/access", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "logout" }),
+                    }).then(() => {
+                      window.location.assign("/login");
+                    });
+                  }
+                : undefined
+            }
           />
           {inbox.error && <div className="bg-red-500/10 px-4 py-2 text-sm text-red-300">{inbox.error}</div>}
           <div className="relative grid min-h-0 flex-1 md:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">

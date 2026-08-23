@@ -1,3 +1,4 @@
+import { accessRequired } from "@/lib/access";
 import { defaultDomainsFromEnv, isMockMode, parsePositiveInt } from "@/lib/env";
 import { getStore } from "@/lib/store";
 import type { AppSettings, ManagedDomain, PublicConfig } from "@/lib/types";
@@ -68,6 +69,7 @@ export function publicConfig(settings: AppSettings): PublicConfig {
     domains: settings.domains.map((d) => d.name),
     inboxTtlSeconds: settings.inboxTtlSeconds,
     mockMode: isMockMode(),
+    accessEnabled: accessRequired(),
   };
 }
 

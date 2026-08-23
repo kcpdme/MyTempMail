@@ -58,6 +58,7 @@ export type PublicConfig = {
   domains: string[];
   inboxTtlSeconds: number;
   mockMode: boolean;
+  accessEnabled: boolean;
 };
 
 export type SendPayload = {

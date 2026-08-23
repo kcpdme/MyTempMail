@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Dice5, Plus, Settings2 } from "lucide-react";
+import { Check, Copy, Dice5, LogOut, Plus, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ export function IdentityBar({
   onRandomize,
   onAddInbox,
   onCompose,
+  onLogout,
 }: {
   domains: string[];
   active: string;
@@ -29,6 +30,7 @@ export function IdentityBar({
   onRandomize: (domain: string) => string;
   onAddInbox: (local: string, domain: string) => void;
   onCompose: () => void;
+  onLogout?: () => void;
 }) {
   const [local, setLocal] = useState("");
   const [domain, setDomain] = useState(domains[0] ?? "");
@@ -119,6 +121,13 @@ export function IdentityBar({
           <Settings2 className="h-4 w-4" />
         </Button>
       </Link>
+      {onLogout && (
+        <Tooltip content="Sign out">
+          <Button type="button" variant="ghost" size="icon" aria-label="Sign out" onClick={onLogout}>
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </Tooltip>
+      )}
     </header>
   );
 }
