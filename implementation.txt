@@ -1,0 +1,77 @@
+ Problem
+
+  spec.txt describes a lightweight full-stack temporary-mail app: multi-domain disposable addresses, inbound mail via Resend webhooks stored in Upstash Redis with TTL, sending/replying via Resend,
+  and a split-pane UI with 5s polling. Deliverables: MyTempMail/implementation.txt (design doc) and the working app in MyTempMail/.
+
+  Current state
+
+  • /home/kc/workspace/MyTempMail/ is empty — greenfield. spec.txt lives at the workspace root.
+  • No credentials or verified receiving domain exist yet, so the app must be fully exercisable without Resend/Upstash.
+  • Local conventions from mypassnextjs-main/mypass/package.json: Next 16 + React 19 + Tailwind v4 (@tailwindcss/postcss) + Lucide + TypeScript + npm. Same stack the spec asks for.
+  • Node is not on PATH; fnm has v22.23.1. npm/Next commands must prepend /home/kc/.local/share/fnm/node-versions/v22.23.1/installation/bin.
+
+  Verified API facts
+
+  • email.received webhooks carry metadata only; body/headers require resend.emails.receiving.get(email_id).
+  • Node SDK verification is resend.webhooks.verify({ payload, headers: { id, timestamp, signature }, webhookSecret }); it needs raw req.text() and the three svix-* headers.
+  • resend.emails.send uses replyTo (camelCase) in the Node SDK; reply_to in the spec is the REST field name.
+  • @upstash/redis automatically serializes plain objects. Current limits are 10 MB/request and 100 MB/record, but message bodies should still be capped.
+
+  Proposed design
+
+  Data model
+
+  Retain the requested inbox prefix but split metadata from bodies for cheap polling and individual deletes:
+
+  • inbox:{address} — ZSET scored by received timestamp, member = Resend email id.
+  • msg:{address}:{id} — normalized full message object.
+  • Apply INBOX_TTL_SECONDS (default 86400) to both keys on write; trim to MAX_MESSAGES_PER_INBOX (default 50); cap stored HTML/text at 256 KB.
+  • Using Resend's email_id makes retried webhooks idempotent.
+
+  API routes
+
+  • GET /api/config — domains, TTL, and mock-mode state.
+  • POST /api/webhooks/resend — Node runtime; verify raw payload; retrieve content; normalize; store once for each configured recipient in to, cc, or received_for.
+  • GET /api/inbox?email= — lightweight summaries for 5s polling.
+  • GET /api/inbox/[id]?email= — full selected message.
+  • DELETE /api/inbox?email=&id= — delete one message; omit id to clear the inbox.
+  • POST /api/send — validate sender/recipient; send via Resend; use replyTo plus In-Reply-To/References for replies.
+  • POST /api/dev/seed — mock-mode-only test message.
+
+  Mock mode
+
+  MOCK_MODE=1 swaps Upstash for an in-memory store, stubs outbound sends, enables the seed route, and defaults domains to example.test. Route handlers share one store/mailer interface, so production
+  and mock behavior do not diverge.
+
+  Frontend
+
+  app/page.tsx composes a split pane from focused components: address/domain controls and saved-address switcher on the left; inbox list and safe message reader on the right. Addresses and active
+  selection live in localStorage. Compose and Reply share a modal; Reply prefills Re: and quoted text. Polling runs every 5 seconds behind a toggle, pauses on hidden tabs, and aborts stale requests.
+
+  Safe HTML preview
+
+  Sanitize with DOMPurify client-side, strip remote images by default behind a Show Images toggle, then render with iframe sandbox="" and srcDoc. Without allow-scripts or allow-same-origin, email
+  scripts and same-origin access remain blocked.
+
+  Validation and abuse controls
+
+  Use a strict local-part pattern, configured-domain allowlist, reserved-name blocklist, input size limits, and @upstash/ratelimit for /api/send and inbox reads (disabled only in mock mode).
+  Document that disposable inboxes are intentionally unauthenticated and readable by anyone who knows the address.
+
+  Deliverable files
+
+  • implementation.txt, .env.example, .gitignore, README.md, package/tooling configuration.
+  • app/{layout,page,globals.css} and seven API route modules.
+  • components/{AddressPanel,InboxList,MessageView,HtmlPreview,ComposeModal}.tsx.
+  • hooks/{useAddresses,useInbox}.ts.
+  • lib/{redis,store,resend,domains,sanitize,random,ratelimit,types}.ts.
+  • .env.example: DOMAINS, Resend key/webhook secret, Upstash URL/token, TTL, inbox cap, and MOCK_MODE=1.
+
+  Validation
+
+  Run lint, unit tests, and production build with the fnm Node path. In mock mode, verify create/switch address, seed, poll/refresh, read safely, compose/reply, copy, and delete. Unit-test
+  domain/address validation, reply construction, Redis-store behavior through its contract, and webhook normalization using Resend's documented payload.
+
+  Out of scope
+
+  SSE/websocket push, attachment download proxying (metadata only), user authentication, and persistence beyond Redis TTL.

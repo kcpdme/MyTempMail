@@ -1,0 +1,24 @@
+Build a lightweight, clean, full-stack Temporary Mail web application using Next.js (App Router, Tailwind CSS, Lucide icons), Resend SDK, and Upstash Redis.
+
+Key Requirements:
+1. Multi-Domain & Identity Management:
+   - Configurable list of verified domains in an environment variable (`DOMAINS=domain1.com,domain2.com`).
+   - Frontend controls to select a domain from a dropdown, input a custom username, or click "Generate Random".
+   - Allow managing/switching between multiple active disposable addresses in the same session (stored in localStorage).
+
+2. Receiving (Inbound via Resend Webhook):
+   - Create a webhook route `/api/webhooks/resend` accepting Resend's `email.received` event.
+   - Fetch the full email content via `resend.emails.receiving.get(email_id)`.
+   - Store parsed emails in Redis under `inbox:{email_address}` with a configurable TTL (default 24h / 86400s).
+   - Create an API route `GET /api/inbox?email=...` for the frontend to poll or fetch inbox messages.
+
+3. Sending & Replying:
+   - Provide a "Compose Email" modal and an inline "Reply" button on received messages.
+   - API route `POST /api/send` that uses `resend.emails.send({ from: currentSelectedEmail, to, subject, html, text, reply_to })`.
+   - Pre-fill subject (`Re: ...`) and quote previous text when replying.
+
+4. UI/UX:
+   - Split-pane layout: Left pane for address switcher and inbox list; Right pane for reading email HTML/text with safe preview, headers (From, Date, Subject), and Action buttons (Reply, Delete, Copy Address, Refresh).
+   - Real-time or auto-polling (every 5 seconds) toggle for incoming messages.
+
+Please provide the full file structure, all API routes, frontend components, and `.env.example` setup.
