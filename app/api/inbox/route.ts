@@ -12,7 +12,8 @@ export async function GET(request: NextRequest) {
     const email = request.nextUrl.searchParams.get("email") ?? "";
     const settings = await getSettings();
     const parsed = assertDisposableAddress(email, domainAllowlist(settings.domains));
-    if (settings.resendApiKey) {
+    const sync = request.nextUrl.searchParams.get("sync") === "1";
+    if (sync && settings.resendApiKey) {
       try {
         await ingestReceivedForAddress(settings.resendApiKey, parsed.email, {
           ttlSeconds: settings.inboxTtlSeconds,

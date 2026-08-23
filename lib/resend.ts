@@ -127,15 +127,19 @@ export async function ingestReceivedForAddress(
 ): Promise<number> {
   if (!apiKey || isMockMode()) return 0;
   const resend = createResend(apiKey);
-  const listed = await resend.emails.receiving.list({ limit: 50 });
+  const listed = await resend.emails.receiving.list({ limit: 20 });
   if (listed.error) return 0;
   const items = listed.data?.data ?? [];
   const want = email.toLowerCase();
+  const cutoff = Date.now() - (opts.ttlSeconds || 86400) * 1000;
   const store = getStore();
   const have = new Set((await store.listInbox(want)).map((item) => item.id));
   let stored = 0;
   for (const item of items) {
+    if (stored >= 10) break;
     if (have.has(item.id)) continue;
+    const created = Date.parse(item.created_at);
+    if (Number.isFinite(created) && created < cutoff) continue;
     const recipients = recipientsForInbox(
       {
         to: item.to,

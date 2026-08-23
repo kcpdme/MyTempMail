@@ -231,7 +231,7 @@ export function MailApp() {
                   setMobileDetail(true);
                   void inbox.fetchMessage(id);
                 }}
-                onRefresh={() => void inbox.fetchList()}
+                onRefresh={() => void inbox.fetchList({ sync: true })}
                 onToggleAuto={() => setAutoRefresh((v) => !v)}
                 onToggleNotify={async () => {
                   if (!notify && typeof Notification !== "undefined") {

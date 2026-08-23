@@ -14,7 +14,7 @@ export function useInbox(email: string, autoRefresh: boolean) {
   const [lastFetchAt, setLastFetchAt] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
-  const fetchList = useCallback(async (opts?: { silent?: boolean }) => {
+  const fetchList = useCallback(async (opts?: { silent?: boolean; sync?: boolean }) => {
     if (!email) return [];
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -22,7 +22,9 @@ export function useInbox(email: string, autoRefresh: boolean) {
     if (!opts?.silent) setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/inbox?email=${encodeURIComponent(email)}`, {
+      const params = new URLSearchParams({ email });
+      if (opts?.sync) params.set("sync", "1");
+      const res = await fetch(`/api/inbox?${params.toString()}`, {
         signal: controller.signal,
       });
       const data = await res.json();
@@ -78,7 +80,7 @@ export function useInbox(email: string, autoRefresh: boolean) {
     setSelectedId(null);
     setMessage(null);
     setMessages([]);
-    void fetchList();
+    void fetchList({ sync: true });
   }, [email, fetchList]);
 
   useEffect(() => {
