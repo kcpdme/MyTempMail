@@ -173,8 +173,8 @@ export function SettingsForm({
         </label>
         {initial.webhookUrl && (
           <p className="text-xs text-zinc-500">
-            Resend webhook must be this exact HTTPS URL (no trailing slash, not *.vercel.app if you use a custom
-            domain):{" "}
+            Resend webhook must be this exact HTTPS URL with no redirect (if the apex
+            domain 308s to www, use www):{" "}
             <code className="break-all text-zinc-300">{initial.webhookUrl}</code>
           </p>
         )}

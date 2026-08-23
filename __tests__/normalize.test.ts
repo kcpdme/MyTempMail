@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { incomingToStored, recipientsForInbox } from "@/lib/normalize";
-import { webhookEndpoint } from "@/lib/urls";
+import { originFromRedirect, webhookEndpoint } from "@/lib/urls";
 import type { IncomingEmail } from "@/lib/types";
 
 const incoming: IncomingEmail = {
@@ -42,5 +42,14 @@ describe("normalize", () => {
 
   it("builds a trailing-slash-free webhook URL", () => {
     expect(webhookEndpoint("https://check-my.email/")).toBe("https://check-my.email/api/webhooks/resend");
+  });
+
+  it("follows apex-to-www webhook redirects", () => {
+    expect(
+      originFromRedirect(
+        "https://www.check-my.email/api/webhooks/resend",
+        "https://check-my.email/api/webhooks/resend",
+      ),
+    ).toBe("https://www.check-my.email");
   });
 });

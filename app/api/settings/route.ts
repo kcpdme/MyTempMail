@@ -14,7 +14,7 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { registerInboundWebhook } from "@/lib/resend";
 import { getSettings, maskKey, saveSettings } from "@/lib/settings";
 import type { AppSettings } from "@/lib/types";
-import { webhookEndpoint } from "@/lib/urls";
+import { resolveCanonicalAppUrl, webhookEndpoint } from "@/lib/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +67,10 @@ export async function PUT(request: NextRequest) {
       inboxTtlSeconds: body.inboxTtlSeconds || current.inboxTtlSeconds,
       maxMessagesPerInbox: body.maxMessagesPerInbox || current.maxMessagesPerInbox,
     };
+
+    if (next.appUrl) {
+      next.appUrl = await resolveCanonicalAppUrl(next.appUrl);
+    }
 
     if (next.resendApiKey && next.appUrl && !isMockMode()) {
       const hook = await registerInboundWebhook(next.resendApiKey, next.appUrl, {
