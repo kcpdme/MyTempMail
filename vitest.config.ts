@@ -10,5 +10,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["__tests__/**/*.test.ts"],
+    env: {
+      MOCK_MODE: "1",
+    },
+    pool: "threads",
+    fileParallelism: false,
   },
 });
