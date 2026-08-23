@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { DomainRecords } from "@/components/DomainRecords";
+import { DomainCard } from "@/components/DomainRecords";
 import type { ManagedDomain } from "@/lib/types";
 
 export type SettingsPayload = {
@@ -9,6 +9,7 @@ export type SettingsPayload = {
   resendApiKeySet: boolean;
   resendApiKeyLast4: string;
   webhookConfigured: boolean;
+  webhookUrl?: string;
   appUrl: string;
   inboxTtlSeconds: number;
   maxMessagesPerInbox: number;
@@ -73,6 +74,7 @@ export function SettingsForm({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not add domain");
       setDomainName("");
+      setMessage(data.imported ? "Attached existing Resend domain." : "Domain added. Copy DNS records, then verify.");
       await onReload();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Could not add domain");
@@ -84,6 +86,28 @@ export function SettingsForm({
   async function removeDomain(name: string) {
     await fetch(`/api/settings/domains?name=${encodeURIComponent(name)}`, { method: "DELETE" });
     await onReload();
+  }
+
+  async function syncDomains() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/settings/domains", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sync: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not import domains");
+      setMessage(
+        data.count ? `Imported ${data.count} domain${data.count === 1 ? "" : "s"} from Resend.` : "No new Resend domains to import.",
+      );
+      await onReload();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Could not import domains");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function verifyDomain(id: string) {
@@ -143,10 +167,17 @@ export function SettingsForm({
           <input
             value={appUrl}
             onChange={(e) => setAppUrl(e.target.value)}
-            placeholder="https://your-app.vercel.app"
+            placeholder="https://your-custom-domain.com"
             className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
           />
         </label>
+        {initial.webhookUrl && (
+          <p className="text-xs text-zinc-500">
+            Resend webhook must be this exact HTTPS URL (no trailing slash, not *.vercel.app if you use a custom
+            domain):{" "}
+            <code className="break-all text-zinc-300">{initial.webhookUrl}</code>
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-sm">
             Inbox TTL (seconds)
@@ -165,46 +196,40 @@ export function SettingsForm({
       <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
         <h2 className="text-lg font-semibold text-zinc-50">Domains</h2>
         <p className="text-sm text-zinc-400">
-          Add a domain you own. Copy the DNS records to your registrar, then verify. Sending and receiving use any
-          username at that domain.
+          Add a domain you own, or import one already in Resend. DNS records come from Resend — copy them to your
+          registrar, then verify. Sending and receiving use any username at that domain.
         </p>
-        <form onSubmit={addDomain} className="flex gap-2">
+        <form onSubmit={addDomain} className="flex flex-wrap gap-2">
           <input
             value={domainName}
             onChange={(e) => setDomainName(e.target.value)}
             placeholder="mail.example.com"
-            className="flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
+            className="min-w-[200px] flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
           />
           <button disabled={busy} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950">
             Add domain
           </button>
+          {!initial.mockMode && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void syncDomains()}
+              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200"
+            >
+              Import from Resend
+            </button>
+          )}
         </form>
         <div className="space-y-6">
           {initial.domains.map((domain) => (
-            <div key={domain.name} className="space-y-3 border-t border-zinc-800 pt-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <strong>{domain.name}</strong>
-                <span className="text-xs text-zinc-500">
-                  {domain.status || "added"} · send {domain.sending || "?"} · receive {domain.receiving || "?"}
-                </span>
-                <div className="ml-auto flex gap-2">
-                  {domain.resendId && (
-                    <>
-                      <button type="button" className="text-sm underline" onClick={() => void refreshDomain(domain.resendId!)}>
-                        Refresh
-                      </button>
-                      <button type="button" className="text-sm underline" onClick={() => void verifyDomain(domain.resendId!)}>
-                        I added DNS records
-                      </button>
-                    </>
-                  )}
-                  <button type="button" className="text-sm text-red-400" onClick={() => void removeDomain(domain.name)}>
-                    Remove
-                  </button>
-                </div>
-              </div>
-              <DomainRecords records={domain.records ?? []} />
-            </div>
+            <DomainCard
+              key={domain.name}
+              domain={domain}
+              busy={busy}
+              onRefresh={(id) => void refreshDomain(id)}
+              onVerify={(id) => void verifyDomain(id)}
+              onRemove={(name) => void removeDomain(name)}
+            />
           ))}
         </div>
       </section>

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { assertDisposableAddress, domainAllowlist } from "@/lib/domains";
 import { jsonError, jsonOk } from "@/lib/http";
+import { ingestReceivedForAddress } from "@/lib/resend";
 import { getSettings } from "@/lib/settings";
 import { getStore } from "@/lib/store";
 
@@ -11,6 +12,17 @@ export async function GET(request: NextRequest) {
     const email = request.nextUrl.searchParams.get("email") ?? "";
     const settings = await getSettings();
     const parsed = assertDisposableAddress(email, domainAllowlist(settings.domains));
+    if (settings.resendApiKey) {
+      try {
+        await ingestReceivedForAddress(settings.resendApiKey, parsed.email, {
+          ttlSeconds: settings.inboxTtlSeconds,
+          maxMessages: settings.maxMessagesPerInbox,
+          allowlist: domainAllowlist(settings.domains),
+        });
+      } catch {
+        /* Redis list still returned below */
+      }
+    }
     const messages = await getStore().listInbox(parsed.email);
     return jsonOk({ email: parsed.email, messages });
   } catch (error) {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { incomingToStored, recipientsForInbox } from "@/lib/normalize";
+import { webhookEndpoint } from "@/lib/urls";
 import type { IncomingEmail } from "@/lib/types";
 
 const incoming: IncomingEmail = {
@@ -29,5 +30,17 @@ describe("normalize", () => {
   it("stores only recipients on configured domains", () => {
     const recipients = recipientsForInbox(incoming, ["mail.example.com"]);
     expect(recipients).toEqual(["ada@mail.example.com"]);
+  });
+
+  it("still stores received_for when the allowlist is stale", () => {
+    const recipients = recipientsForInbox(
+      { to: ["other@gmail.com"], cc: [], receivedFor: ["kcpd@check-my.email"] },
+      ["mail.example.com"],
+    );
+    expect(recipients).toEqual(["kcpd@check-my.email"]);
+  });
+
+  it("builds a trailing-slash-free webhook URL", () => {
+    expect(webhookEndpoint("https://check-my.email/")).toBe("https://check-my.email/api/webhooks/resend");
   });
 });

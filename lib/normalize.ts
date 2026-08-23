@@ -25,6 +25,18 @@ export function toSummary(message: StoredMessage) {
   };
 }
 
+export function coerceAddresses(value: unknown): string[] {
+  if (!value) return [];
+  if (typeof value === "string") {
+    return value
+      .split(/[,;]/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  if (Array.isArray(value)) return value.flatMap((item) => coerceAddresses(item));
+  return [];
+}
+
 export function incomingToStored(incoming: IncomingEmail): StoredMessage {
   const text = capBody(incoming.text ?? "");
   const html = capBody(incoming.html ?? "");
@@ -36,7 +48,7 @@ export function incomingToStored(incoming: IncomingEmail): StoredMessage {
   return {
     id: incoming.id,
     from: incoming.from,
-    to: incoming.to.map(normalizeEmail),
+    to: coerceAddresses(incoming.to).map(normalizeEmail),
     subject: incoming.subject || "(no subject)",
     receivedAt: incoming.receivedAt,
     snippet: snippetFrom(text, html),
@@ -45,14 +57,18 @@ export function incomingToStored(incoming: IncomingEmail): StoredMessage {
     text,
     messageId: incoming.messageId || incoming.headers?.["message-id"] || incoming.headers?.["Message-ID"] || incoming.id,
     references: headerRefs,
-    cc: incoming.cc.map(normalizeEmail),
+    cc: coerceAddresses(incoming.cc).map(normalizeEmail),
     headers: incoming.headers ?? {},
     attachments: incoming.attachments,
   };
 }
 
-export function recipientsForInbox(incoming: IncomingEmail, allowlist: string[]): string[] {
-  const raw = [...incoming.to, ...incoming.cc, ...incoming.receivedFor];
+export function recipientsForInbox(
+  incoming: { to?: unknown; cc?: unknown; receivedFor?: unknown },
+  allowlist: string[],
+): string[] {
+  const receivedFor = coerceAddresses(incoming.receivedFor);
+  const raw = [...receivedFor, ...coerceAddresses(incoming.to), ...coerceAddresses(incoming.cc)];
   const seen = new Set<string>();
   const out: string[] = [];
   for (const item of raw) {
@@ -61,6 +77,13 @@ export function recipientsForInbox(incoming: IncomingEmail, allowlist: string[])
     if (!parsed) continue;
     if (!isAllowedDomain(parsed.domain, allowlist)) continue;
     if (seen.has(addr)) continue;
+    seen.add(addr);
+    out.push(addr);
+  }
+  if (out.length > 0) return out;
+  for (const item of receivedFor) {
+    const addr = normalizeEmail(extractAddress(item));
+    if (!parseEmail(addr) || seen.has(addr)) continue;
     seen.add(addr);
     out.push(addr);
   }

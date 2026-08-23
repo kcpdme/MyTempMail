@@ -84,3 +84,22 @@ export function isExternalEmail(value: string): boolean {
 export function domainAllowlist(domains: { name: string }[]): string[] {
   return domains.map((d) => d.name.toLowerCase()).filter(Boolean);
 }
+
+export function isDomainVerified(status?: string): boolean {
+  return status === "verified";
+}
+
+export function domainCardStartsCollapsed(domain: { status?: string; records?: unknown[] }): boolean {
+  if (isDomainVerified(domain.status)) return true;
+  if ((domain.status === "mock" || domain.status === "env") && !domain.records?.length) return true;
+  return false;
+}
+
+export function pickExistingResendDomain<T extends { name: string; status?: string }>(
+  domains: T[] | undefined,
+  name: string,
+): T | undefined {
+  const needle = name.trim().toLowerCase();
+  const matches = (domains ?? []).filter((d) => d.name.toLowerCase() === needle);
+  return matches.find((d) => d.status === "verified") ?? matches[0];
+}

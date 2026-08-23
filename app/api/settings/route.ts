@@ -14,6 +14,7 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { registerInboundWebhook } from "@/lib/resend";
 import { getSettings, maskKey, saveSettings } from "@/lib/settings";
 import type { AppSettings } from "@/lib/types";
+import { webhookEndpoint } from "@/lib/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ function publicSettings(settings: AppSettings) {
     resendApiKeyLast4: key.last4,
     webhookConfigured: Boolean(settings.resendWebhookSecret),
     resendWebhookId: settings.resendWebhookId || null,
+    webhookUrl: settings.appUrl ? webhookEndpoint(settings.appUrl) : "",
     appUrl: settings.appUrl,
     inboxTtlSeconds: settings.inboxTtlSeconds,
     maxMessagesPerInbox: settings.maxMessagesPerInbox,
@@ -66,9 +68,11 @@ export async function PUT(request: NextRequest) {
       maxMessagesPerInbox: body.maxMessagesPerInbox || current.maxMessagesPerInbox,
     };
 
-    const keyChanged = Boolean(body.resendApiKey?.trim() && body.resendApiKey.trim() !== current.resendApiKey);
-    if (next.resendApiKey && next.appUrl && (keyChanged || !next.resendWebhookSecret) && !isMockMode()) {
-      const hook = await registerInboundWebhook(next.resendApiKey, next.appUrl, next.resendWebhookId);
+    if (next.resendApiKey && next.appUrl && !isMockMode()) {
+      const hook = await registerInboundWebhook(next.resendApiKey, next.appUrl, {
+        id: next.resendWebhookId,
+        hasSecret: Boolean(next.resendWebhookSecret),
+      });
       next.resendWebhookId = hook.id;
       if (hook.signingSecret) next.resendWebhookSecret = hook.signingSecret;
     }

@@ -21,7 +21,7 @@ function webhookHeaders(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.text();
-    const settings = await getSettings();
+    const settings = await getSettings({ fresh: true });
     if (!settings.resendWebhookSecret) {
       return jsonError(Object.assign(new Error("Webhook secret is not configured"), { status: 503 }));
     }
@@ -42,7 +42,6 @@ export async function POST(request: NextRequest) {
     const stored = incomingToStored(incoming);
     const recipients = recipientsForInbox(
       {
-        ...incoming,
         to: event.data.to?.length ? event.data.to : incoming.to,
         cc: event.data.cc?.length ? event.data.cc : incoming.cc,
         receivedFor: event.data.received_for?.length ? event.data.received_for : incoming.receivedFor,
@@ -59,7 +58,7 @@ export async function POST(request: NextRequest) {
       await store.saveMessage(email, stored, opts);
     }
 
-    return jsonOk({ stored: recipients.length });
+    return jsonOk({ stored: recipients.length, recipients });
   } catch (error) {
     return jsonError(error);
   }

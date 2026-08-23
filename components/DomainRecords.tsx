@@ -1,8 +1,77 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
-import { useState } from "react";
-import type { DnsRecord } from "@/lib/types";
+import { Check, ChevronDown, ChevronRight, Copy } from "lucide-react";
+import { useEffect, useState } from "react";
+import { domainCardStartsCollapsed, isDomainVerified } from "@/lib/domains";
+import type { DnsRecord, ManagedDomain } from "@/lib/types";
+
+export function DomainCard({
+  domain,
+  busy,
+  onRefresh,
+  onVerify,
+  onRemove,
+}: {
+  domain: ManagedDomain;
+  busy: boolean;
+  onRefresh: (id: string) => void;
+  onVerify: (id: string) => void;
+  onRemove: (name: string) => void;
+}) {
+  const [open, setOpen] = useState(() => !domainCardStartsCollapsed(domain));
+  const verified = isDomainVerified(domain.status);
+
+  useEffect(() => {
+    if (verified) setOpen(false);
+  }, [verified]);
+
+  return (
+    <div className="space-y-3 border-t border-zinc-800 pt-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className="flex items-center gap-1 text-left text-zinc-100"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+        >
+          {open ? <ChevronDown className="h-4 w-4 text-zinc-500" /> : <ChevronRight className="h-4 w-4 text-zinc-500" />}
+          <strong>{domain.name}</strong>
+        </button>
+        <span className="text-xs text-zinc-500">
+          {domain.status || "added"} · send {domain.sending || "?"} · receive {domain.receiving || "?"}
+        </span>
+        <div className="ml-auto flex gap-2">
+          {domain.resendId && (
+            <>
+              <button
+                type="button"
+                className="text-sm underline disabled:opacity-40"
+                disabled={busy}
+                onClick={() => onRefresh(domain.resendId!)}
+              >
+                Refresh
+              </button>
+              {!verified && (
+                <button
+                  type="button"
+                  className="text-sm underline disabled:opacity-40"
+                  disabled={busy}
+                  onClick={() => onVerify(domain.resendId!)}
+                >
+                  I added DNS records
+                </button>
+              )}
+            </>
+          )}
+          <button type="button" className="text-sm text-red-400" onClick={() => onRemove(domain.name)}>
+            Remove
+          </button>
+        </div>
+      </div>
+      {open && <DomainRecords records={domain.records ?? []} />}
+    </div>
+  );
+}
 
 export function DomainRecords({ records }: { records: DnsRecord[] }) {
   if (!records.length) {

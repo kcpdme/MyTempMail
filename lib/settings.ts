@@ -48,8 +48,8 @@ function overlay(base: AppSettings, stored: Partial<AppSettings> | null): AppSet
   };
 }
 
-export async function getSettings(): Promise<AppSettings> {
-  if (cache && Date.now() - cache.at < CACHE_MS) {
+export async function getSettings(opts?: { fresh?: boolean }): Promise<AppSettings> {
+  if (!opts?.fresh && cache && Date.now() - cache.at < CACHE_MS) {
     return cache.value;
   }
   const stored = await getStore().getRawSettings();

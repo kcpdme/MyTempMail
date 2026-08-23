@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   assertDisposableAddress,
+  domainCardStartsCollapsed,
   isValidLocalPart,
   normalizeEmail,
   parseEmail,
+  pickExistingResendDomain,
 } from "@/lib/domains";
 
 describe("domains", () => {
@@ -28,5 +30,22 @@ describe("domains", () => {
     expect(() => assertDisposableAddress("alice@gmail.com", ["mail.example.com"])).toThrow(
       /not configured/,
     );
+  });
+
+  it("prefers a verified Resend domain when names collide", () => {
+    const picked = pickExistingResendDomain(
+      [
+        { name: "Mail.Example.com", status: "not_started", id: "old" },
+        { name: "mail.example.com", status: "verified", id: "good" },
+      ],
+      "MAIL.EXAMPLE.COM",
+    );
+    expect(picked?.id).toBe("good");
+  });
+
+  it("collapses verified domain cards and mock rows without DNS", () => {
+    expect(domainCardStartsCollapsed({ status: "verified", records: [{ type: "MX" }] })).toBe(true);
+    expect(domainCardStartsCollapsed({ status: "pending", records: [{ type: "MX" }] })).toBe(false);
+    expect(domainCardStartsCollapsed({ status: "mock" })).toBe(true);
   });
 });
