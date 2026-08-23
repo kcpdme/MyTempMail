@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ComposeModal } from "@/components/ComposeModal";
 import { IdentityBar } from "@/components/IdentityBar";
@@ -35,7 +35,7 @@ export function MailApp() {
   const { config, error: configError } = useConfig();
   const domains = config?.domains ?? [];
   const { addresses, active, setActive, addAddress, generate, removeAddress, createdAt } = useAddresses(domains);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [notify, setNotify] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mobileDetail, setMobileDetail] = useState(false);
@@ -47,16 +47,10 @@ export function MailApp() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeMode, setComposeMode] = useState<"compose" | "reply" | "forward">("compose");
   const [draft, setDraft] = useState({ to: "", subject: "", body: "" });
-  const [now, setNow] = useState(Date.now());
   const primed = useRef(false);
   const seenIds = useRef<Set<string>>(new Set());
   const prevEmail = useRef(active);
   const unreadCache = useRef<Record<string, number>>({});
-
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 200);
-    return () => window.clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (prevEmail.current !== active) {
@@ -152,12 +146,7 @@ export function MailApp() {
     setCopied(true);
     toast.success("Address copied");
     window.setTimeout(() => setCopied(false), 1500);
-  }
-
-  const pollProgress = useMemo(() => {
-    if (!autoRefresh || !inbox.lastFetchAt) return 0;
-    return Math.min(100, ((now - inbox.lastFetchAt) / inbox.pollMs) * 100);
-  }, [autoRefresh, inbox.lastFetchAt, inbox.pollMs, now]);
+  };
 
   if (configError) {
     return <div className="p-8 text-red-400">{configError}</div>;
@@ -220,7 +209,6 @@ export function MailApp() {
                 isUnread={unread.isUnread}
                 loading={inbox.loading}
                 autoRefresh={autoRefresh}
-                pollProgress={pollProgress}
                 notify={notify}
                 mockMode={config.mockMode}
                 onSeed={() => void seed()}

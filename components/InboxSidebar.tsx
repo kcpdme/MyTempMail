@@ -16,7 +16,6 @@ export function InboxSidebar({
   isUnread,
   loading,
   autoRefresh,
-  pollProgress,
   notify,
   onSelectAddress,
   onRemoveAddress,
@@ -35,7 +34,6 @@ export function InboxSidebar({
   isUnread: (id: string) => boolean;
   loading: boolean;
   autoRefresh: boolean;
-  pollProgress: number;
   notify: boolean;
   onSelectAddress: (email: string) => void;
   onRemoveAddress: (email: string) => void;
@@ -88,29 +86,30 @@ export function InboxSidebar({
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-3 py-2">
-        <button type="button" onClick={onToggleAuto} className="flex items-center gap-2 text-xs text-zinc-400">
-          <span className="relative h-4 w-4">
-            <span className="absolute inset-0 rounded-full border border-zinc-700" />
-            {autoRefresh && (
-              <span
-                className="absolute inset-0 rounded-full border-2 border-emerald-400 border-t-transparent"
-                style={{ transform: `rotate(${pollProgress * 3.6}deg)` }}
-              />
-            )}
-            {autoRefresh && <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400 pulse-dot" />}
-          </span>
-          {autoRefresh ? "Auto-refresh 5s" : "Auto-refresh off"}
-        </button>
+      <div className="flex items-center justify-between gap-2 px-3 py-2">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Inbox</p>
         <div className="flex items-center gap-1">
           <Tooltip content={notify ? "Desktop alerts on" : "Enable desktop alerts"}>
             <Button type="button" size="icon" variant="ghost" onClick={onToggleNotify}>
               {notify ? <Bell className="h-4 w-4 text-emerald-400" /> : <BellOff className="h-4 w-4" />}
             </Button>
           </Tooltip>
-          <Tooltip content="Refresh">
-            <Button type="button" size="icon" variant="ghost" onClick={onRefresh}>
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <Tooltip content={autoRefresh ? "Auto-refresh on (every 5s)" : "Enable auto-refresh"}>
+            <Button
+              type="button"
+              size="sm"
+              variant={autoRefresh ? "default" : "outline"}
+              aria-pressed={autoRefresh}
+              onClick={onToggleAuto}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${autoRefresh ? "bg-zinc-950 pulse-dot" : "bg-zinc-600"}`} />
+              Auto
+            </Button>
+          </Tooltip>
+          <Tooltip content="Refresh now">
+            <Button type="button" size="sm" variant="secondary" onClick={onRefresh}>
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
             </Button>
           </Tooltip>
         </div>
@@ -123,7 +122,7 @@ export function InboxSidebar({
               <Inbox className="h-8 w-8 text-zinc-500" />
             </div>
             <p className="text-sm text-zinc-300">Your inbox is waiting for incoming mail…</p>
-            <p className="text-xs text-zinc-500">Keep this tab visible, or hit Refresh.</p>
+            <p className="text-xs text-zinc-500">Hit Refresh to check for mail, or turn on Auto.</p>
             {mockMode && (
               <button type="button" onClick={onSeed} className="text-xs text-emerald-400 underline">
                 Seed test message
