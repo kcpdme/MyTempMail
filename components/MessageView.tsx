@@ -27,9 +27,14 @@ export function MessageView({
 
   if (!message) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-zinc-500">
-        <p>Select an email from the left to read</p>
-      </div>
+      <>
+        <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-sm text-zinc-500 md:hidden">
+          <p>Opening message…</p>
+        </div>
+        <div className="hidden h-full flex-col items-center justify-center gap-2 text-sm text-zinc-500 md:flex">
+          <p>Select an email from the left to read</p>
+        </div>
+      </>
     );
   }
 
@@ -38,38 +43,38 @@ export function MessageView({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-zinc-950">
-      <div className="border-b border-zinc-800 px-5 py-4">
+      <div className="border-b border-zinc-800 px-4 py-3 md:px-5 md:py-4">
         {onBack && (
-          <Button type="button" variant="ghost" size="sm" className="mb-2 md:hidden" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" /> Back to inbox
+          <Button type="button" variant="ghost" size="sm" className="-ml-2 mb-2 h-10 md:hidden" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4" /> Inbox
           </Button>
         )}
-        <h2 className="text-xl font-semibold tracking-tight text-zinc-50">{message.subject}</h2>
+        <h2 className="text-lg font-semibold tracking-tight break-words text-zinc-50 md:text-xl">{message.subject}</h2>
         <div className="mt-3 flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-500/20 text-sm font-semibold text-violet-200">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-sm font-semibold text-violet-200">
             {initials(fromName)}
           </div>
           <div className="min-w-0 text-sm">
             <p className="font-medium text-zinc-100">{fromName}</p>
-            <p className="text-zinc-500">From: {displayAddress(message.from)}</p>
-            <p className="text-zinc-500">To: {message.to.join(", ")}</p>
+            <p className="break-all text-zinc-500">From: {displayAddress(message.from)}</p>
+            <p className="break-all text-zinc-500">To: {message.to.join(", ")}</p>
             <p className="text-zinc-500">{new Date(message.receivedAt).toLocaleString()}</p>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" onClick={onReply}>
+        <div className="mt-4 grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
+          <Button type="button" size="sm" className="h-11 md:h-8" onClick={onReply}>
             <Reply className="h-4 w-4" /> Reply
           </Button>
-          <Button type="button" size="sm" variant="secondary" onClick={onForward}>
+          <Button type="button" size="sm" variant="secondary" className="h-11 md:h-8" onClick={onForward}>
             <Forward className="h-4 w-4" /> Forward
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => onCopy(prefersHtml ? "html" : "text")}>
+          <Button type="button" size="sm" variant="outline" className="h-11 md:h-8" onClick={() => onCopy(prefersHtml ? "html" : "text")}>
             <Copy className="h-4 w-4" /> Copy {prefersHtml ? "HTML" : "raw"}
           </Button>
-          <Button type="button" size="sm" variant="danger" onClick={onDelete}>
+          <Button type="button" size="sm" variant="danger" className="h-11 md:h-8" onClick={onDelete}>
             <Trash2 className="h-4 w-4" /> Delete
           </Button>
-          <div className="ml-auto flex items-center gap-2 text-xs text-zinc-400">
+          <div className="col-span-2 flex items-center gap-3 pt-1 text-xs text-zinc-400 md:ml-auto md:w-auto md:pt-0">
             <button
               type="button"
               className={view === "html" ? "text-emerald-300" : ""}

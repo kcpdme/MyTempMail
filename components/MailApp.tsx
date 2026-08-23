@@ -149,10 +149,10 @@ export function MailApp() {
   };
 
   if (configError) {
-    return <div className="p-8 text-red-400">{configError}</div>;
+    return <div className="px-4 py-8 text-red-400">{configError}</div>;
   }
   if (!config) {
-    return <div className="p-8 text-sm text-zinc-500">Loading workspace…</div>;
+    return <div className="px-4 py-8 text-sm text-zinc-500">Loading workspace…</div>;
   }
   if (domains.length === 0) {
     return (
@@ -171,7 +171,7 @@ export function MailApp() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen overflow-hidden bg-zinc-950">
+      <div className="flex h-dvh overflow-hidden bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <IdentityBar
             domains={domains}
@@ -179,6 +179,7 @@ export function MailApp() {
             createdAt={createdAt[active]}
             ttlSeconds={config.inboxTtlSeconds}
             copied={copied}
+            compact={mobileDetail}
             onCopy={() => void copyAddress()}
             onRandomize={generate}
             onAddInbox={addAddress}

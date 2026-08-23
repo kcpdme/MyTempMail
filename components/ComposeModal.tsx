@@ -82,11 +82,17 @@ export function ComposeModal({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className={minimized ? "top-auto bottom-4 translate-y-0" : undefined}>
-        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-          <DialogTitle className="text-sm font-semibold">{title}</DialogTitle>
+      <DialogContent
+        className={
+          minimized
+            ? "inset-x-3 bottom-4 top-auto h-auto max-h-none translate-y-0 rounded-2xl border border-zinc-800 md:left-auto md:right-4 md:w-[min(720px,calc(100vw-1.5rem))]"
+            : "flex h-dvh max-h-dvh flex-col md:h-auto md:max-h-[90vh]"
+        }
+      >
+        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <DialogTitle className="truncate pr-2 text-sm font-semibold">{title}</DialogTitle>
           <div className="flex items-center gap-1">
-            <Button type="button" size="icon" variant="ghost" onClick={() => setMinimized((v) => !v)}>
+            <Button type="button" size="icon" variant="ghost" className="hidden md:inline-flex" onClick={() => setMinimized((v) => !v)}>
               <Minus className="h-4 w-4" />
             </Button>
             <Button type="button" size="icon" variant="ghost" onClick={onClose}>
@@ -95,13 +101,13 @@ export function ComposeModal({
           </div>
         </div>
         {!minimized && (
-          <div className="space-y-3 p-4 text-sm">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-sm pb-[max(1rem,env(safe-area-inset-bottom))]">
             <label className="block">
               <span className="text-zinc-500">From</span>
               <select
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="mt-1 h-9 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3"
+                className="mt-1 h-12 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 text-base md:h-9 md:text-sm"
               >
                 {fromOptions.map((item) => (
                   <option key={item} value={item}>
@@ -129,7 +135,7 @@ export function ComposeModal({
                   onKeyDown={onToKey}
                   onBlur={() => addChip(draftTo)}
                   placeholder="name@example.com"
-                  className="h-7 min-w-[140px] flex-1 bg-transparent text-sm outline-none"
+                  className="h-10 min-w-[140px] flex-1 bg-transparent text-base outline-none md:h-7 md:text-sm"
                 />
               </div>
             </div>
@@ -140,7 +146,7 @@ export function ComposeModal({
             <label className="block">
               <span className="text-zinc-500">Message</span>
               <textarea
-                rows={12}
+                rows={8}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(event) => {
@@ -149,17 +155,17 @@ export function ComposeModal({
                     void send();
                   }
                 }}
-                className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-xs leading-5 text-zinc-200 outline-none focus:border-emerald-500/60"
+                className="mt-1 min-h-[12rem] w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-base leading-6 text-zinc-200 outline-none focus:border-emerald-500/60 md:min-h-0 md:text-xs md:leading-5"
               />
             </label>
             {error && <p className="text-red-400">{error}</p>}
-            <div className="flex items-center justify-between pt-1">
-              <p className="text-[11px] text-zinc-500">⌘/Ctrl + Enter to send</p>
-              <div className="flex gap-2">
-                <Button type="button" variant="ghost" onClick={onClose}>
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <p className="hidden text-[11px] text-zinc-500 md:block">⌘/Ctrl + Enter to send</p>
+              <div className="flex w-full gap-2 md:ml-auto md:w-auto">
+                <Button type="button" variant="ghost" className="flex-1 md:flex-none" onClick={onClose}>
                   Discard
                 </Button>
-                <Button type="button" onClick={() => void send()} disabled={busy}>
+                <Button type="button" className="flex-1 md:flex-none" onClick={() => void send()} disabled={busy}>
                   {busy ? "Sending…" : "Send"}
                 </Button>
               </div>

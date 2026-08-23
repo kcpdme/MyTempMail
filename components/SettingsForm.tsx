@@ -149,7 +149,7 @@ export function SettingsForm({
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="re_…"
-            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-base md:text-sm"
           />
         </label>
         <label className="block text-sm">
@@ -159,7 +159,7 @@ export function SettingsForm({
             value={webhookSecret}
             onChange={(e) => setWebhookSecret(e.target.value)}
             placeholder="Optional if the app can register the webhook"
-            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-base md:text-sm"
           />
         </label>
         <label className="block text-sm">
@@ -168,7 +168,7 @@ export function SettingsForm({
             value={appUrl}
             onChange={(e) => setAppUrl(e.target.value)}
             placeholder="https://your-custom-domain.com"
-            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-base md:text-sm"
           />
         </label>
         {initial.webhookUrl && (
@@ -178,14 +178,14 @@ export function SettingsForm({
             <code className="break-all text-zinc-300">{initial.webhookUrl}</code>
           </p>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block text-sm">
             Inbox TTL (seconds)
-            <input value={ttl} onChange={(e) => setTtl(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2" />
+            <input value={ttl} onChange={(e) => setTtl(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-base md:text-sm" />
           </label>
           <label className="block text-sm">
             Max messages
-            <input value={max} onChange={(e) => setMax(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2" />
+            <input value={max} onChange={(e) => setMax(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-base md:text-sm" />
           </label>
         </div>
         <button disabled={busy} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950">
@@ -204,7 +204,7 @@ export function SettingsForm({
             value={domainName}
             onChange={(e) => setDomainName(e.target.value)}
             placeholder="mail.example.com"
-            className="min-w-[200px] flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
+            className="min-w-0 flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-base md:min-w-[200px] md:text-sm"
           />
           <button disabled={busy} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950">
             Add domain

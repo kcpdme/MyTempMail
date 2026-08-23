@@ -35,13 +35,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-3xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
+    <div className="mx-auto min-h-dvh max-w-3xl px-4 py-8 pt-[max(2rem,env(safe-area-inset-top))]">
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-400">MyTempMail</p>
           <h1 className="text-2xl font-semibold text-zinc-50">Settings</h1>
         </div>
-        <div className="flex gap-3 text-sm text-zinc-400">
+        <div className="flex shrink-0 gap-3 text-sm text-zinc-400">
           <Link href="/" className="hover:text-zinc-100">
             Inbox
           </Link>

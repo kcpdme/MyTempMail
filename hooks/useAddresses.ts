@@ -44,8 +44,8 @@ export function useAddresses(domains: string[]) {
   }, []);
 
   const generate = useCallback(
-    (domain: string) => addAddress(randomLocalPart(), domain),
-    [addAddress],
+    (domain: string) => addAddress(randomLocalPart(addresses), domain),
+    [addAddress, addresses],
   );
 
   const removeAddress = useCallback((email: string) => {

@@ -1,16 +1,29 @@
-const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+import { ADJECTIVES, NOUNS } from "@/lib/words";
 
-export function randomLocalPart(length = 10): string {
-  const bytes = new Uint8Array(length);
+function pickIndex(length: number): number {
+  const bytes = new Uint32Array(1);
   crypto.getRandomValues(bytes);
-  let out = "";
-  for (let i = 0; i < length; i++) {
-    out += ALPHABET[bytes[i] % ALPHABET.length];
+  return bytes[0] % length;
+}
+
+function pickWord(list: readonly string[]): string {
+  return list[pickIndex(list.length)];
+}
+
+function localFromTaken(value: string): string {
+  const at = value.lastIndexOf("@");
+  return (at > 0 ? value.slice(0, at) : value).toLowerCase();
+}
+
+/** Easy-to-type local-part like `calm-otter`. */
+export function randomLocalPart(taken: Iterable<string> = []): string {
+  const used = new Set([...taken].map(localFromTaken));
+  for (let attempt = 0; attempt < 32; attempt++) {
+    const candidate = `${pickWord(ADJECTIVES)}-${pickWord(NOUNS)}`;
+    if (!used.has(candidate)) return candidate;
   }
-  if (!/^[a-z]/.test(out)) {
-    out = "a" + out.slice(1);
-  }
-  return out;
+  const extra = 10 + pickIndex(90);
+  return `${pickWord(ADJECTIVES)}-${pickWord(NOUNS)}-${extra}`;
 }
 
 export function randomId(prefix = "msg"): string {

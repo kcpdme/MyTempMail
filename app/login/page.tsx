@@ -33,7 +33,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
+    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-[max(1.5rem,env(safe-area-inset-top))]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-400">MyTempMail</p>
       <h1 className="mb-2 text-2xl font-semibold text-zinc-50">Private inbox</h1>
       <p className="mb-6 text-sm text-zinc-500">
