@@ -7,13 +7,21 @@ const STORAGE_KEY = "tm.addresses";
 const ACTIVE_KEY = "tm.active";
 const CREATED_KEY = "tm.createdAt";
 
-export function useAddresses(domains: string[]) {
+export function useAddresses(domains: string[], opts?: { enabled?: boolean }) {
+  const enabled = opts?.enabled !== false;
   const [addresses, setAddresses] = useState<string[]>([]);
   const [active, setActive] = useState<string>("");
   const [createdAt, setCreatedAt] = useState<Record<string, number>>({});
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (!enabled) {
+      setAddresses([]);
+      setActive("");
+      setCreatedAt({});
+      setReady(true);
+      return;
+    }
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]") as string[];
       const current = localStorage.getItem(ACTIVE_KEY) || saved[0] || "";
@@ -26,14 +34,14 @@ export function useAddresses(domains: string[]) {
     } finally {
       setReady(true);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !enabled) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(addresses));
     localStorage.setItem(ACTIVE_KEY, active);
     localStorage.setItem(CREATED_KEY, JSON.stringify(createdAt));
-  }, [addresses, active, createdAt, ready]);
+  }, [addresses, active, createdAt, ready, enabled]);
 
   const addAddress = useCallback((local: string, domain: string) => {
     const email = `${local.toLowerCase()}@${domain.toLowerCase()}`;
@@ -62,9 +70,9 @@ export function useAddresses(domains: string[]) {
   }, []);
 
   useEffect(() => {
-    if (!ready || addresses.length > 0 || domains.length === 0) return;
+    if (!enabled || !ready || addresses.length > 0 || domains.length === 0) return;
     generate(domains[0]);
-  }, [ready, addresses.length, domains, generate]);
+  }, [ready, addresses.length, domains, generate, enabled]);
 
   return { addresses, active, setActive, addAddress, generate, removeAddress, createdAt, ready };
 }

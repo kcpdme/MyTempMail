@@ -1,13 +1,7 @@
 import { NextRequest } from "next/server";
-import {
-  ACCESS_COOKIE,
-  ACCESS_MAX_AGE,
-  accessRequired,
-  signAccessToken,
-  accessPassword,
-  verifyAccessPassword,
-} from "@/lib/access";
+import { ACCESS_COOKIE, ACCESS_MAX_AGE, accessRequired, signAccessToken, accessPassword, verifyAccessPassword } from "@/lib/access";
 import { HttpError } from "@/lib/domains";
+import { GUEST_COOKIE } from "@/lib/guest-session";
 import { jsonError, jsonOk } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +16,7 @@ export async function POST(request: NextRequest) {
     if (body.action === "logout") {
       const res = jsonOk({ ok: true });
       res.cookies.delete(ACCESS_COOKIE);
+      res.cookies.delete(GUEST_COOKIE);
       return res;
     }
     if (!accessRequired()) {
@@ -32,6 +27,7 @@ export async function POST(request: NextRequest) {
     }
     const token = await signAccessToken(accessPassword());
     const res = jsonOk({ ok: true });
+    res.cookies.delete(GUEST_COOKIE);
     res.cookies.set(ACCESS_COOKIE, token, {
       httpOnly: true,
       sameSite: "lax",

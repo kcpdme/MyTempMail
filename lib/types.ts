@@ -61,6 +61,21 @@ export type PublicConfig = {
   accessEnabled: boolean;
 };
 
+export type ShareRecord = {
+  hash: string;
+  salt: string;
+  version: number;
+  createdAt: number;
+  expiresAt: number;
+};
+
+export type SessionInfo = {
+  role: "member" | "guest" | "none";
+  email?: string;
+  sessionExpiresAt?: number;
+  shareExpiresAt?: number;
+};
+
 export type SendPayload = {
   from: string;
   to: string | string[];

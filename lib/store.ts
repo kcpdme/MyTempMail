@@ -1,7 +1,8 @@
 import { getRedis } from "@/lib/redis";
 import { isMockMode } from "@/lib/env";
 import { toSummary } from "@/lib/normalize";
-import type { AppSettings, InboxSummary, StoredMessage } from "@/lib/types";
+import { isShareActive, shareKey } from "@/lib/share";
+import type { AppSettings, InboxSummary, ShareRecord, StoredMessage } from "@/lib/types";
 
 const SETTINGS_KEY = "app:settings";
 const MAX_DEFAULT = 50;
@@ -27,11 +28,15 @@ export type MailStore = {
   clearInbox(email: string): Promise<void>;
   getRawSettings(): Promise<Partial<AppSettings> | null>;
   saveRawSettings(settings: AppSettings): Promise<void>;
+  getShare(email: string): Promise<ShareRecord | null>;
+  putShare(email: string, record: ShareRecord, ttlSeconds: number): Promise<void>;
+  deleteShare(email: string): Promise<void>;
 };
 
 type MemoryState = {
   inboxes: Map<string, InboxSummary[]>;
   messages: Map<string, { message: StoredMessage; expiresAt: number }>;
+  shares: Map<string, ShareRecord>;
   settings: AppSettings | null;
 };
 
@@ -41,6 +46,7 @@ function globalMemory(): MemoryState {
     g.__tmMemory = {
       inboxes: new Map(),
       messages: new Map(),
+      shares: new Map(),
       settings: null,
     };
   }
@@ -117,6 +123,24 @@ class MemoryStore implements MailStore {
   async saveRawSettings(settings: AppSettings): Promise<void> {
     this.state.settings = settings;
   }
+
+  async getShare(email: string): Promise<ShareRecord | null> {
+    const record = this.state.shares.get(shareKey(email)) ?? null;
+    if (!isShareActive(record)) {
+      if (record) this.state.shares.delete(shareKey(email));
+      return null;
+    }
+    return record;
+  }
+
+  async putShare(email: string, record: ShareRecord, ttlSeconds: number): Promise<void> {
+    void ttlSeconds;
+    this.state.shares.set(shareKey(email), record);
+  }
+
+  async deleteShare(email: string): Promise<void> {
+    this.state.shares.delete(shareKey(email));
+  }
 }
 
 class RedisStore implements MailStore {
@@ -185,6 +209,24 @@ class RedisStore implements MailStore {
 
   async saveRawSettings(settings: AppSettings): Promise<void> {
     await this.redis.set(SETTINGS_KEY, settings);
+  }
+
+  async getShare(email: string): Promise<ShareRecord | null> {
+    const record = await this.redis.get<ShareRecord>(shareKey(email));
+    if (!record || !isShareActive(record)) {
+      if (record) await this.redis.del(shareKey(email));
+      return null;
+    }
+    return record;
+  }
+
+  async putShare(email: string, record: ShareRecord, ttlSeconds: number): Promise<void> {
+    const ttl = Math.max(1, Math.floor(ttlSeconds));
+    await this.redis.set(shareKey(email), record, { ex: ttl });
+  }
+
+  async deleteShare(email: string): Promise<void> {
+    await this.redis.del(shareKey(email));
   }
 }
 

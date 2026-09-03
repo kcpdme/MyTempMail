@@ -3,6 +3,7 @@ import { assertDisposableAddress, domainAllowlist, HttpError, isExternalEmail } 
 import { jsonError, jsonOk } from "@/lib/http";
 import { clientIp, limitSend } from "@/lib/ratelimit";
 import { sendMail } from "@/lib/resend";
+import { requireMember } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,7 @@ const MAX_BODY = 100 * 1024;
 
 export async function POST(request: NextRequest) {
   try {
+    await requireMember();
     const limited = await limitSend(clientIp(request));
     if (!limited.ok) {
       throw new HttpError("Too many sends. Try again later.", 429);

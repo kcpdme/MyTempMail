@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { assertDisposableAddress, domainAllowlist } from "@/lib/domains";
 import { jsonError, jsonOk } from "@/lib/http";
 import { ingestReceivedForAddress } from "@/lib/resend";
+import { requireCanRead, requireMember } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { getStore } from "@/lib/store";
 
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest) {
     const email = request.nextUrl.searchParams.get("email") ?? "";
     const settings = await getSettings();
     const parsed = assertDisposableAddress(email, domainAllowlist(settings.domains));
+    await requireCanRead(parsed.email);
     const sync = request.nextUrl.searchParams.get("sync") === "1";
     if (sync && settings.resendApiKey) {
       try {
@@ -37,6 +39,7 @@ export async function DELETE(request: NextRequest) {
     const id = request.nextUrl.searchParams.get("id");
     const settings = await getSettings();
     const parsed = assertDisposableAddress(email, domainAllowlist(settings.domains));
+    await requireMember();
     if (id) {
       await getStore().deleteMessage(parsed.email, id);
     } else {

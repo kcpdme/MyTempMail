@@ -14,13 +14,15 @@ export function MessageView({
   onForward,
   onDelete,
   onCopy,
+  readOnly,
 }: {
   message: StoredMessage | null;
   onBack?: () => void;
-  onReply: () => void;
-  onForward: () => void;
-  onDelete: () => void;
+  onReply?: () => void;
+  onForward?: () => void;
+  onDelete?: () => void;
   onCopy: (kind: "text" | "html") => void;
+  readOnly?: boolean;
 }) {
   const [view, setView] = useState<"html" | "text">("html");
   const [showImages, setShowImages] = useState(false);
@@ -62,18 +64,24 @@ export function MessageView({
           </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
-          <Button type="button" size="sm" className="h-11 md:h-8" onClick={onReply}>
-            <Reply className="h-4 w-4" /> Reply
-          </Button>
-          <Button type="button" size="sm" variant="secondary" className="h-11 md:h-8" onClick={onForward}>
-            <Forward className="h-4 w-4" /> Forward
-          </Button>
+          {!readOnly && onReply && (
+            <Button type="button" size="sm" className="h-11 md:h-8" onClick={onReply}>
+              <Reply className="h-4 w-4" /> Reply
+            </Button>
+          )}
+          {!readOnly && onForward && (
+            <Button type="button" size="sm" variant="secondary" className="h-11 md:h-8" onClick={onForward}>
+              <Forward className="h-4 w-4" /> Forward
+            </Button>
+          )}
           <Button type="button" size="sm" variant="outline" className="h-11 md:h-8" onClick={() => onCopy(prefersHtml ? "html" : "text")}>
             <Copy className="h-4 w-4" /> Copy {prefersHtml ? "HTML" : "raw"}
           </Button>
-          <Button type="button" size="sm" variant="danger" className="h-11 md:h-8" onClick={onDelete}>
-            <Trash2 className="h-4 w-4" /> Delete
-          </Button>
+          {!readOnly && onDelete && (
+            <Button type="button" size="sm" variant="danger" className="h-11 md:h-8" onClick={onDelete}>
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+          )}
           <div className="col-span-2 flex items-center gap-3 pt-1 text-xs text-zinc-400 md:ml-auto md:w-auto md:pt-0">
             <button
               type="button"

@@ -68,4 +68,35 @@ describe("store", () => {
     expect(list.map((m) => m.id)).toEqual(["three", "two"]);
     expect(await store.getMessage(email, "one")).toBeNull();
   });
+
+  it("stores and expires guest share records", async () => {
+    const store = getStore();
+    const email = "guest@example.test";
+    await store.putShare(
+      email,
+      {
+        hash: "h",
+        salt: "s",
+        version: 1,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 60_000,
+      },
+      60,
+    );
+    expect((await store.getShare(email))?.version).toBe(1);
+    await store.putShare(
+      email,
+      {
+        hash: "h",
+        salt: "s",
+        version: 1,
+        createdAt: Date.now() - 2_000,
+        expiresAt: Date.now() - 1,
+      },
+      1,
+    );
+    expect(await store.getShare(email)).toBeNull();
+    await store.deleteShare(email);
+    expect(await store.getShare(email)).toBeNull();
+  });
 });

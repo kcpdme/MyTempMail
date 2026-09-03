@@ -2,13 +2,14 @@
 
 Disposable inboxes on **Next.js + Vercel**, inbound mail via **Resend**, storage in **Upstash Redis**. No extra server.
 
-Set `ACCESS_PASSWORD` so only people who know that password can open the inbox. `/settings` is a second lock with `SETTINGS_SECRET`. The Resend webhook stays reachable so mail can still be delivered.
+Set `ACCESS_PASSWORD` so only people who know that password can open the **member** workspace. Guests can still open a **single inbox** if a member created a password for it. `/settings` is a second lock with `SETTINGS_SECRET`. The Resend webhook stays reachable so mail can still be delivered.
 
 ## How mail actually moves
 
 - **Receiving** is a Resend webhook. Mail is stored even if the website is closed.
 - **The inbox UI** only talks to Redis while this site is open. Close the tab and polling stops. Switch away and Auto refresh pauses. Refresh always fetches once.
-- **Compose / Reply** send as the selected `user@your-domain`. Resend allows any local-part on a verified domain. You cannot send as `@gmail.com`.
+- **Guest access** is receive-only. A member clicks **Guest access** on an inbox to create a password (valid 3 hours). Guests sign in with that address + password. Each guest visit lasts 30 minutes; they can sign in again while the password is still valid. Guests cannot send, reply, or delete.
+- **Compose / Reply** send as the selected `user@your-domain`. Resend allows any local-part on a verified domain. You cannot send as `@gmail.com`. Guests never see compose.
 
 ## Local (mock, no keys)
 
@@ -19,7 +20,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Use **Random** / **Use**, **Seed** to inject a test message, **Refresh** or Auto 5s, **Compose** / **Reply**. Settings are unlocked in mock mode when `SETTINGS_SECRET` is empty.
+Open [http://localhost:3000](http://localhost:3000). Use **Random** / **Use**, **Seed** to inject a test message, **Refresh** or Auto 5s, **Compose** / **Reply**. Open **Guest access** on an inbox to mint a 3-hour receive-only password. Settings are unlocked in mock mode when `SETTINGS_SECRET` is empty. To try the split login locally, set `ACCESS_PASSWORD` in `.env.local`.
 
 ```bash
 npm test
@@ -45,7 +46,7 @@ Upstash Free (500K commands/month) is enough for normal use: polling only happen
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `ACCESS_PASSWORD` | Production | Locks the inbox UI and APIs behind `/login`. Leave unset for open local mock. |
+| `ACCESS_PASSWORD` | Production | Locks the **member** workspace behind `/login`. Guests use a per-inbox password created in the UI (3 hours, 30-minute sessions). Leave unset for open local mock. |
 | `SETTINGS_SECRET` | Production | Second lock for `/settings` (Resend keys, domains). |
 | `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | Production | Inbox storage. Marketplace may inject `KV_REST_API_*` instead. |
 | `RESEND_API_KEY` | To send/receive | Optional in env if you paste it in Settings. |
@@ -58,4 +59,4 @@ Upstash Free (500K commands/month) is enough for normal use: polling only happen
 
 Env values are defaults. Saving Settings overlays Resend/domains/TTL without a redeploy. Passwords stay in env only.
 
-`POST /api/webhooks/resend` stays public so Resend can deliver mail. Everything else is gated when `ACCESS_PASSWORD` is set.
+`POST /api/webhooks/resend` stays public so Resend can deliver mail. `/login`, `/api/access`, `/api/guest`, `/api/config`, and `/api/session` stay reachable so guests can sign in. Inbox reads require a member cookie or a guest cookie bound to that address. Send, delete, and share mutations are member-only.

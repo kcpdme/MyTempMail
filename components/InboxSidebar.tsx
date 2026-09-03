@@ -31,6 +31,7 @@ export function InboxSidebar({
   onToggleNotify,
   mockMode,
   onSeed,
+  readOnly,
 }: {
   addresses: string[];
   active: string;
@@ -49,6 +50,7 @@ export function InboxSidebar({
   onToggleNotify: () => void;
   mockMode?: boolean;
   onSeed?: () => void;
+  readOnly?: boolean;
 }) {
   return (
     <aside className="flex h-full min-h-0 flex-col bg-zinc-950 md:border-r md:border-zinc-800">
@@ -77,14 +79,16 @@ export function InboxSidebar({
                     {unread}
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={() => onRemoveAddress(email)}
-                  className="rounded-full p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
-                  aria-label={`Remove ${email}`}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveAddress(email)}
+                    className="rounded-full p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                    aria-label={`Remove ${email}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             );
           })}
@@ -129,7 +133,7 @@ export function InboxSidebar({
             </div>
             <p className="text-sm text-zinc-300">Your inbox is waiting for incoming mail…</p>
             <p className="text-xs text-zinc-500">Hit Refresh to check for mail, or turn on Auto.</p>
-            {mockMode && (
+            {mockMode && !readOnly && (
               <button type="button" onClick={onSeed} className="text-xs text-emerald-400 underline">
                 Seed test message
               </button>

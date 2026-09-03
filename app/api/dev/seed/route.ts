@@ -5,6 +5,7 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { incomingToStored } from "@/lib/normalize";
 import { randomId } from "@/lib/random";
 import { getSettings } from "@/lib/settings";
+import { requireMember } from "@/lib/session";
 import { getStore } from "@/lib/store";
 import type { IncomingEmail } from "@/lib/types";
 
@@ -15,6 +16,7 @@ export async function POST(request: NextRequest) {
     if (!isMockMode()) {
       throw new HttpError("Seed is only available in mock mode", 403);
     }
+    await requireMember();
     const body = (await request.json()) as {
       email?: string;
       from?: string;

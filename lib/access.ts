@@ -1,3 +1,5 @@
+import { hmac, safeEqual } from "@/lib/hmac";
+
 const COOKIE = "tm_access";
 const MAX_AGE = 60 * 60 * 24 * 7;
 
@@ -7,29 +9,6 @@ export function accessPassword(): string {
 
 export function accessRequired(): boolean {
   return Boolean(accessPassword());
-}
-
-function toHex(buffer: ArrayBuffer): string {
-  return [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function hmac(secret: string, value: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value));
-  return toHex(sig);
-}
-
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let out = 0;
-  for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return out === 0;
 }
 
 export async function signAccessToken(secret: string): Promise<string> {
