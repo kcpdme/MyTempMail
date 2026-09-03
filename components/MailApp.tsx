@@ -41,7 +41,7 @@ export function MailApp() {
   const domains = config?.domains ?? [];
   const { addresses, active: memberActive, setActive, addAddress, generate, removeAddress, createdAt } = useAddresses(
     domains,
-    { enabled: Boolean(session) && !isGuest },
+    { enabled: Boolean(session) && !isGuest, ttlSeconds: config?.inboxTtlSeconds },
   );
   const active = isGuest ? (session?.email ?? "") : memberActive;
   const visibleAddresses = isGuest && active ? [active] : addresses;

@@ -1,5 +1,8 @@
 import { ADJECTIVES, NOUNS } from "@/lib/words";
 
+const SUFFIX_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz";
+const SUFFIX_LENGTH = 6;
+
 function pickIndex(length: number): number {
   const bytes = new Uint32Array(1);
   crypto.getRandomValues(bytes);
@@ -15,15 +18,24 @@ function localFromTaken(value: string): string {
   return (at > 0 ? value.slice(0, at) : value).toLowerCase();
 }
 
-/** Easy-to-type local-part like `calm-otter`. */
+function randomSuffix(length = SUFFIX_LENGTH): string {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += SUFFIX_ALPHABET[bytes[i]! % SUFFIX_ALPHABET.length];
+  }
+  return out;
+}
+
+/** Easy-to-type unique local-part like `calm-otter-k7n2qm`. */
 export function randomLocalPart(taken: Iterable<string> = []): string {
   const used = new Set([...taken].map(localFromTaken));
   for (let attempt = 0; attempt < 32; attempt++) {
-    const candidate = `${pickWord(ADJECTIVES)}-${pickWord(NOUNS)}`;
+    const candidate = `${pickWord(ADJECTIVES)}-${pickWord(NOUNS)}-${randomSuffix()}`;
     if (!used.has(candidate)) return candidate;
   }
-  const extra = 10 + pickIndex(90);
-  return `${pickWord(ADJECTIVES)}-${pickWord(NOUNS)}-${extra}`;
+  return `${pickWord(ADJECTIVES)}-${pickWord(NOUNS)}-${randomSuffix()}${randomSuffix()}`;
 }
 
 export function randomId(prefix = "msg"): string {

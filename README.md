@@ -6,8 +6,9 @@ Set `ACCESS_PASSWORD` so only people who know that password can open the **membe
 
 ## How mail actually moves
 
-- **Receiving** is a Resend webhook. Mail is stored even if the website is closed.
-- **The inbox UI** only talks to Redis while this site is open. Close the tab and polling stops. Switch away and Auto refresh pauses. Refresh always fetches once.
+- **Receiving** is a Resend webhook. Mail is stored even if the website is closed. Quiet inboxes expire after 24 hours idle (Settings TTL); a new message resets that clock.
+- **The inbox UI** only talks to Redis while this site is open. Close the tab and polling stops. Switch away and Auto refresh pauses. Refresh always fetches once. Expired address tabs drop off the sidebar.
+- **Random / New** mint a unique `word-word-xxxxxx` address. Typed **Use** stays whatever you type.
 - **Guest access** is receive-only. A member clicks **Guest access** on an inbox to create a password (valid 3 hours). Guests sign in with that address + password. Each guest visit lasts 30 minutes; they can sign in again while the password is still valid. Guests cannot send, reply, or delete.
 - **Compose / Reply** send as the selected `user@your-domain`. Resend allows any local-part on a verified domain. You cannot send as `@gmail.com`. Guests never see compose.
 
