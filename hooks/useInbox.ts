@@ -1,11 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { STANDARD_POLL_MS } from "@/lib/inbox-refresh";
 import type { InboxSummary, StoredMessage } from "@/lib/types";
 
-const POLL_MS = 5000;
-
-export function useInbox(email: string, autoRefresh: boolean) {
+export function useInbox(email: string, pollMs = STANDARD_POLL_MS) {
   const [messages, setMessages] = useState<InboxSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [message, setMessage] = useState<StoredMessage | null>(null);
@@ -80,16 +79,16 @@ export function useInbox(email: string, autoRefresh: boolean) {
     setSelectedId(null);
     setMessage(null);
     setMessages([]);
-    void fetchList({ sync: true });
+    void fetchList();
   }, [email, fetchList]);
 
   useEffect(() => {
-    if (!email || !autoRefresh) return;
+    if (!email || pollMs <= 0) return;
     const tick = () => {
       if (document.hidden) return;
       void fetchList({ silent: true });
     };
-    const id = window.setInterval(tick, POLL_MS);
+    const id = window.setInterval(tick, pollMs);
     const onVisibility = () => {
       if (!document.hidden) void fetchList({ silent: true });
     };
@@ -99,7 +98,7 @@ export function useInbox(email: string, autoRefresh: boolean) {
       document.removeEventListener("visibilitychange", onVisibility);
       abortRef.current?.abort();
     };
-  }, [email, autoRefresh, fetchList]);
+  }, [email, fetchList, pollMs]);
 
   return {
     messages,
@@ -108,7 +107,7 @@ export function useInbox(email: string, autoRefresh: boolean) {
     loading,
     error,
     lastFetchAt,
-    pollMs: POLL_MS,
+    pollMs,
     fetchList,
     fetchMessage,
     remove,

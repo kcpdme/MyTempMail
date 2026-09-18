@@ -14,6 +14,12 @@ import { useInbox } from "@/hooks/useInbox";
 import { useSession } from "@/hooks/useSession";
 import { useShareStatus } from "@/hooks/useShareStatus";
 import { useUnread } from "@/hooks/useUnread";
+import {
+  STANDARD_POLL_MS,
+  WATCH_DURATION_MS,
+  WATCH_POLL_MS,
+  watchRemainingSeconds,
+} from "@/lib/inbox-refresh";
 import { buildForwardDraft, buildReplyDraft, replyHeaders } from "@/lib/reply";
 import { displayName } from "@/lib/utils";
 
@@ -45,12 +51,15 @@ export function MailApp() {
   );
   const active = isGuest ? (session?.email ?? "") : memberActive;
   const visibleAddresses = isGuest && active ? [active] : addresses;
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [watchUntil, setWatchUntil] = useState<number | null>(null);
+  const [watchNow, setWatchNow] = useState(() => Date.now());
   const [notify, setNotify] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mobileDetail, setMobileDetail] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const inbox = useInbox(active, autoRefresh);
+  const watchRemaining = watchRemainingSeconds(watchUntil, watchNow);
+  const watching = watchRemaining > 0;
+  const inbox = useInbox(active, watching ? WATCH_POLL_MS : STANDARD_POLL_MS);
   const share = useShareStatus(active, Boolean(session) && !isGuest && Boolean(active));
   const unread = useUnread(
     active,
@@ -96,8 +105,21 @@ export function MailApp() {
       seenIds.current = new Set();
       prevEmail.current = active;
       setMobileDetail(false);
+      setWatchUntil(null);
     }
   }, [active]);
+
+  useEffect(() => {
+    if (!watchUntil) return;
+    const update = () => {
+      const now = Date.now();
+      setWatchNow(now);
+      if (now >= watchUntil) setWatchUntil(null);
+    };
+    update();
+    const id = window.setInterval(update, 1000);
+    return () => window.clearInterval(id);
+  }, [watchUntil]);
 
   useEffect(() => {
     const ids = inbox.messages.map((m) => m.id);
@@ -187,6 +209,16 @@ export function MailApp() {
     window.setTimeout(() => setCopied(false), 1500);
   }
 
+  function toggleWatch() {
+    if (watching) {
+      setWatchUntil(null);
+      return;
+    }
+    const now = Date.now();
+    setWatchNow(now);
+    setWatchUntil(now + WATCH_DURATION_MS);
+  }
+
   function logout() {
     const url = isGuest ? "/api/guest" : "/api/access";
     void fetch(url, {
@@ -252,7 +284,8 @@ export function MailApp() {
                 unreadFor={(email) => (email === active ? unread.unreadCount : unreadCache.current[email] ?? 0)}
                 isUnread={unread.isUnread}
                 loading={inbox.loading}
-                autoRefresh={autoRefresh}
+                watching={watching}
+                watchRemaining={watchRemaining}
                 notify={notify}
                 mockMode={config.mockMode}
                 readOnly={isGuest}
@@ -265,7 +298,7 @@ export function MailApp() {
                   void inbox.fetchMessage(id);
                 }}
                 onRefresh={() => void inbox.fetchList({ sync: true })}
-                onToggleAuto={() => setAutoRefresh((v) => !v)}
+                onToggleWatch={toggleWatch}
                 onToggleNotify={async () => {
                   if (!notify && typeof Notification !== "undefined") {
                     const permission = await Notification.requestPermission();

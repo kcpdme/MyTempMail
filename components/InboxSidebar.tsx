@@ -1,9 +1,10 @@
 "use client";
 
-import { Bell, BellOff, Inbox, RefreshCw, X } from "lucide-react";
+import { Bell, BellOff, Eye, Inbox, RefreshCw, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
+import { formatWatchRemaining } from "@/lib/inbox-refresh";
 import { displayName, relativeTime } from "@/lib/utils";
 import type { InboxSummary } from "@/lib/types";
 
@@ -21,13 +22,14 @@ export function InboxSidebar({
   unreadFor,
   isUnread,
   loading,
-  autoRefresh,
+  watching,
+  watchRemaining,
   notify,
   onSelectAddress,
   onRemoveAddress,
   onSelectMessage,
   onRefresh,
-  onToggleAuto,
+  onToggleWatch,
   onToggleNotify,
   mockMode,
   onSeed,
@@ -40,13 +42,14 @@ export function InboxSidebar({
   unreadFor: (email: string) => number;
   isUnread: (id: string) => boolean;
   loading: boolean;
-  autoRefresh: boolean;
+  watching: boolean;
+  watchRemaining: number;
   notify: boolean;
   onSelectAddress: (email: string) => void;
   onRemoveAddress: (email: string) => void;
   onSelectMessage: (id: string) => void;
   onRefresh: () => void;
-  onToggleAuto: () => void;
+  onToggleWatch: () => void;
   onToggleNotify: () => void;
   mockMode?: boolean;
   onSeed?: () => void;
@@ -103,17 +106,23 @@ export function InboxSidebar({
               {notify ? <Bell className="h-4 w-4 text-emerald-400" /> : <BellOff className="h-4 w-4" />}
             </Button>
           </Tooltip>
-          <Tooltip content={autoRefresh ? "Auto-refresh on (every 5s)" : "Enable auto-refresh"}>
+          <Tooltip
+            content={
+              watching
+                ? `Watching every 5 seconds · ${formatWatchRemaining(watchRemaining)} left`
+                : "Watch every 5 seconds for 3 minutes"
+            }
+          >
             <Button
               type="button"
               size="sm"
-              variant={autoRefresh ? "default" : "outline"}
-              aria-pressed={autoRefresh}
-              onClick={onToggleAuto}
+              variant={watching ? "default" : "outline"}
+              aria-pressed={watching}
+              onClick={onToggleWatch}
               className="h-10 px-3 md:h-8"
             >
-              <span className={`h-1.5 w-1.5 rounded-full ${autoRefresh ? "bg-zinc-950 pulse-dot" : "bg-zinc-600"}`} />
-              Auto
+              <Eye className={`h-3.5 w-3.5 ${watching ? "text-zinc-950" : ""}`} />
+              {watching ? formatWatchRemaining(watchRemaining) : "Watch"}
             </Button>
           </Tooltip>
           <Tooltip content="Refresh now">
@@ -132,7 +141,7 @@ export function InboxSidebar({
               <Inbox className="h-8 w-8 text-zinc-500" />
             </div>
             <p className="text-sm text-zinc-300">Your inbox is waiting for incoming mail…</p>
-            <p className="text-xs text-zinc-500">Hit Refresh to check for mail, or turn on Auto.</p>
+            <p className="text-xs text-zinc-500">Checks every 30 seconds. Use Watch for faster 5-second checks.</p>
             {mockMode && !readOnly && (
               <button type="button" onClick={onSeed} className="text-xs text-emerald-400 underline">
                 Seed test message

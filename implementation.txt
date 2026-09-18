@@ -1,7 +1,7 @@
  Problem
 
   spec.txt describes a lightweight full-stack temporary-mail app: multi-domain disposable addresses, inbound mail via Resend webhooks stored in Upstash Redis with TTL, sending/replying via Resend,
-  and a split-pane UI with 5s polling. Deliverables: MyTempMail/implementation.txt (design doc) and the working app in MyTempMail/.
+  and a split-pane UI with cost-aware polling. Deliverables: MyTempMail/implementation.txt (design doc) and the working app in MyTempMail/.
 
   Current state
 
@@ -32,7 +32,7 @@
 
   • GET /api/config — domains, TTL, and mock-mode state.
   • POST /api/webhooks/resend — Node runtime; verify raw payload; retrieve content; normalize; store once for each configured recipient in to, cc, or received_for.
-  • GET /api/inbox?email= — lightweight summaries for 5s polling.
+  • GET /api/inbox?email= — lightweight summaries for 30s polling and temporary 5s Watch mode.
   • GET /api/inbox/[id]?email= — full selected message.
   • DELETE /api/inbox?email=&id= — delete one message; omit id to clear the inbox.
   • POST /api/send — validate sender/recipient; send via Resend; use replyTo plus In-Reply-To/References for replies.
@@ -46,7 +46,7 @@
   Frontend
 
   app/page.tsx composes a split pane from focused components: address/domain controls and saved-address switcher on the left; inbox list and safe message reader on the right. Addresses and active
-  selection live in localStorage. Compose and Reply share a modal; Reply prefills Re: and quoted text. Polling runs every 5 seconds behind a toggle, pauses on hidden tabs, and aborts stale requests.
+  selection live in localStorage. Compose and Reply share a modal; Reply prefills Re: and quoted text. Polling runs every 30 seconds while visible. Watch mode temporarily polls every 5 seconds for 3 minutes, then returns to 30 seconds. Hidden tabs pause and stale requests are aborted. Address selection reads Redis only; manual Refresh additionally runs the Resend recovery sync.
 
   Safe HTML preview
 

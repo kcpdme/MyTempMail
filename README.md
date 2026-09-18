@@ -7,7 +7,7 @@ Set `ACCESS_PASSWORD` so only people who know that password can open the **membe
 ## How mail actually moves
 
 - **Receiving** is a Resend webhook. Mail is stored even if the website is closed. Quiet inboxes expire after 24 hours idle (Settings TTL); a new message resets that clock.
-- **The inbox UI** only talks to Redis while this site is open. Close the tab and polling stops. Switch away and Auto refresh pauses. Refresh always fetches once. Expired address tabs drop off the sidebar.
+- **The inbox UI** only talks to Redis while this site is open. It checks every 30 seconds while visible. **Watch** temporarily speeds that up to every 5 seconds for 3 minutes, then returns to 30 seconds. Switching away pauses checks. Manual **Refresh** also runs the Resend recovery sync. Expired address tabs drop off the sidebar.
 - **Random / New** mint a unique `word-word-xxxxxx` address. Typed **Use** stays whatever you type.
 - **Guest access** is receive-only. A member clicks **Guest access** on an inbox to create a password (valid 3 hours). Guests sign in with that address + password. Each guest visit lasts 30 minutes; they can sign in again while the password is still valid. Guests cannot send, reply, or delete.
 - **Compose / Reply** send as the selected `user@your-domain`. Resend allows any local-part on a verified domain. You cannot send as `@gmail.com`. Guests never see compose.
@@ -21,7 +21,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Use **Random** / **Use**, **Seed** to inject a test message, **Refresh** or Auto 5s, **Compose** / **Reply**. Open **Guest access** on an inbox to mint a 3-hour receive-only password. Settings are unlocked in mock mode when `SETTINGS_SECRET` is empty. To try the split login locally, set `ACCESS_PASSWORD` in `.env.local`.
+Open [http://localhost:3000](http://localhost:3000). Use **Random** / **Use**, **Seed** to inject a test message, **Refresh**, or the temporary 5-second **Watch** mode, plus **Compose** / **Reply**. Open **Guest access** on an inbox to mint a 3-hour receive-only password. Settings are unlocked in mock mode when `SETTINGS_SECRET` is empty. To try the split login locally, set `ACCESS_PASSWORD` in `.env.local`.
 
 ```bash
 npm test
@@ -41,7 +41,7 @@ npm run build
 
 A subdomain such as `mail.example.com` is safer than your root domain.
 
-Upstash Free (500K commands/month) is enough for normal use: polling only happens while a tab is visible.
+Upstash Free (500K commands/month) is enough for normal use: standard checks run every 30 seconds only while a tab is visible, and 5-second Watch mode automatically ends after 3 minutes.
 
 ## Environment variables
 
