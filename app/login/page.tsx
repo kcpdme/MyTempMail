@@ -137,7 +137,7 @@ function LoginForms() {
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400/80">Guest login</p>
             <h2 className="mt-1 text-xl font-semibold text-zinc-50">Read inbox</h2>
-            <p className="mt-1 text-sm text-zinc-500">Receive-only. Session closes after 30 minutes.</p>
+            <p className="mt-1 text-sm text-zinc-500">Receive-only. Access lasts up to 3 days.</p>
           </div>
           <form onSubmit={submitGuest} className="space-y-3">
             <div className="flex overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">

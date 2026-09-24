@@ -3,6 +3,7 @@ import { signGuestToken, verifyGuestToken } from "@/lib/guest-session";
 import { isGuestAllowedRequest, isAlwaysPublicPath } from "@/lib/guest-paths";
 import { dummyVerify, generateGuestPassword, hashPassword, verifyPassword } from "@/lib/passwords";
 import { GUEST_SESSION_SECONDS, SHARE_TTL_SECONDS, guestSessionMaxAgeSeconds, isShareActive } from "@/lib/share";
+import { formatCountdown } from "@/lib/utils";
 
 describe("guest passwords", () => {
   it("hashes and verifies a password", async () => {
@@ -45,13 +46,15 @@ describe("guest session cookie", () => {
 });
 
 describe("guest clocks", () => {
-  it("caps a session at 30 minutes and never past the 3 hour password", () => {
-    expect(SHARE_TTL_SECONDS).toBe(3 * 3600);
-    expect(GUEST_SESSION_SECONDS).toBe(1800);
+  it("allows up to three days while never outliving the guest password", () => {
+    const threeDays = 3 * 24 * 3600;
+    expect(SHARE_TTL_SECONDS).toBe(threeDays);
+    expect(GUEST_SESSION_SECONDS).toBe(threeDays);
     const now = 1_700_000_000_000;
-    expect(guestSessionMaxAgeSeconds(now + 4 * 3600 * 1000, now)).toBe(1800);
+    expect(guestSessionMaxAgeSeconds(now + 4 * 24 * 3600 * 1000, now)).toBe(threeDays);
     expect(guestSessionMaxAgeSeconds(now + 10 * 60 * 1000, now)).toBe(600);
     expect(guestSessionMaxAgeSeconds(now - 1000, now)).toBe(0);
+    expect(formatCountdown(threeDays * 1000)).toBe("3d 0h");
   });
 
   it("treats expired share records as inactive", () => {

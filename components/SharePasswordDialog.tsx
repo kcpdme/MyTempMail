@@ -90,7 +90,7 @@ export function SharePasswordDialog({
     const value = kind === "both" ? `${email}\n${revealed}` : revealed;
     await navigator.clipboard.writeText(value);
     setCopied(kind);
-    toast.success(kind === "both" ? "Address and password copied · Expires in 3 hours" : "Password copied · Expires in 3 hours");
+    toast.success(kind === "both" ? "Address and password copied · Expires in 3 days" : "Password copied · Expires in 3 days");
     window.setTimeout(() => setCopied(null), 1500);
   }
 
@@ -101,8 +101,8 @@ export function SharePasswordDialog({
           <DialogTitle className="text-lg font-semibold text-zinc-50">Guest inbox access</DialogTitle>
           <p className="mt-1 font-mono text-sm text-zinc-400">{email || "Select an inbox"}</p>
           <p className="mt-3 text-sm leading-6 text-zinc-500">
-            Guests can receive and read this inbox only — no send. The password lasts 3 hours. Each guest visit lasts 30
-            minutes; they can sign in again while the password is still valid.
+            Guests can receive and read this inbox only — no send. The password and guest session last up to 3 days.
+            Revoking or rotating the password ends existing guest sessions.
           </p>
 
           {live ? (
@@ -118,7 +118,7 @@ export function SharePasswordDialog({
           {revealed && (
             <div className="mt-4 space-y-2">
               <p className="text-xs font-medium uppercase tracking-wider text-amber-300">
-                Copy now — shown once · Expires in 3 hours
+                Copy now — shown once · Expires in 3 days
               </p>
               <div className="break-all rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 font-mono text-sm text-zinc-100">
                 {revealed}

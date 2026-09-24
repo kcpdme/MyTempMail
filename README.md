@@ -9,7 +9,7 @@ Set `ACCESS_PASSWORD` so only people who know that password can open the **membe
 - **Receiving** is a Resend webhook. Mail is stored even if the website is closed. Quiet inboxes expire after 24 hours idle (Settings TTL); a new message resets that clock.
 - **The inbox UI** only talks to Redis while this site is open. It checks every 30 seconds while visible. **Watch** temporarily speeds that up to every 5 seconds for 3 minutes, then returns to 30 seconds. Switching away pauses checks. Manual **Refresh** also runs the Resend recovery sync. Expired address tabs drop off the sidebar.
 - **Random / New** mint a unique `word-word-xxxxxx` address. Typed **Use** stays whatever you type.
-- **Guest access** is receive-only. A member clicks **Guest access** on an inbox to create a password (valid 3 hours). Guests sign in with that address + password. Each guest visit lasts 30 minutes; they can sign in again while the password is still valid. Guests cannot send, reply, or delete.
+- **Guest access** is receive-only. A member clicks **Guest access** on an inbox to create a password (valid 3 days). Guests sign in with that address + password and stay signed in for up to 3 days. Revoking or rotating the password ends existing guest sessions. Guests cannot send, reply, or delete.
 - **Compose / Reply** send as the selected `user@your-domain`. Resend allows any local-part on a verified domain. You cannot send as `@gmail.com`. Guests never see compose.
 
 ## Local (mock, no keys)
@@ -21,7 +21,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Use **Random** / **Use**, **Seed** to inject a test message, **Refresh**, or the temporary 5-second **Watch** mode, plus **Compose** / **Reply**. Open **Guest access** on an inbox to mint a 3-hour receive-only password. Settings are unlocked in mock mode when `SETTINGS_SECRET` is empty. To try the split login locally, set `ACCESS_PASSWORD` in `.env.local`.
+Open [http://localhost:3000](http://localhost:3000). Use **Random** / **Use**, **Seed** to inject a test message, **Refresh**, or the temporary 5-second **Watch** mode, plus **Compose** / **Reply**. Open **Guest access** on an inbox to mint a 3-day receive-only password. Settings are unlocked in mock mode when `SETTINGS_SECRET` is empty. To try the split login locally, set `ACCESS_PASSWORD` in `.env.local`.
 
 ```bash
 npm test
@@ -47,7 +47,7 @@ Upstash Free (500K commands/month) is enough for normal use: standard checks run
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `ACCESS_PASSWORD` | Production | Locks the **member** workspace behind `/login`. Guests use a per-inbox password created in the UI (3 hours, 30-minute sessions). Leave unset for open local mock. |
+| `ACCESS_PASSWORD` | Production | Locks the **member** workspace behind `/login`. Guests use a per-inbox password created in the UI (3-day password and session). Leave unset for open local mock. |
 | `SETTINGS_SECRET` | Production | Second lock for `/settings` (Resend keys, domains). |
 | `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | Production | Inbox storage. Marketplace may inject `KV_REST_API_*` instead. |
 | `RESEND_API_KEY` | To send/receive | Optional in env if you paste it in Settings. |

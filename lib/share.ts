@@ -1,7 +1,7 @@
 import type { ShareRecord } from "@/lib/types";
 
-export const SHARE_TTL_SECONDS = 3 * 60 * 60;
-export const GUEST_SESSION_SECONDS = 30 * 60;
+export const SHARE_TTL_SECONDS = 3 * 24 * 60 * 60;
+export const GUEST_SESSION_SECONDS = SHARE_TTL_SECONDS;
 export const MIN_GUEST_PASSWORD_LENGTH = 8;
 export const MAX_GUEST_PASSWORD_LENGTH = 64;
 
