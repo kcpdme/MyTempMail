@@ -59,6 +59,8 @@ Upstash Free (500K commands/month) is enough for normal use: standard checks run
 | `MAX_MESSAGES_PER_INBOX` | Optional | Default `50`. |
 | `MOCK_MODE` | Local | `1` = in-memory store, stubbed sends. Omit/`0` in production. |
 
+Settings uses four dashboard tabs: App & delivery, Guest policy, Guest inboxes, and Domains. The Guest inboxes tab keeps search and timeout/revoke controls separate from the other settings.
+
 Env values are defaults. Saving Settings overlays Resend/domains/TTL without a redeploy. Passwords stay in env only.
 
 `POST /api/webhooks/resend` stays public so Resend can deliver mail. `/login`, `/api/access`, `/api/guest`, `/api/config`, and `/api/session` stay reachable so guests can sign in. Inbox reads require a member cookie or a guest cookie bound to that address. Send, delete, and share mutations are member-only.

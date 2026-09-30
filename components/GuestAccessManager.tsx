@@ -73,8 +73,7 @@ export function GuestAccessManager({ defaultDuration, guestDomains }: { defaultD
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5" aria-labelledby="guest-inboxes-title">
-      <h2 id="guest-inboxes-title" className="text-lg font-semibold text-zinc-50">Guest inboxes</h2>
+    <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5" aria-label="Current guest access">
       <p className="text-sm text-zinc-400">Search existing guest email addresses, reset their timeout, or revoke access. Expired and revoked grants are removed automatically.</p>
       <form onSubmit={search} className="flex flex-wrap gap-2">
         <input
@@ -83,7 +82,7 @@ export function GuestAccessManager({ defaultDuration, guestDomains }: { defaultD
           value={query}
           maxLength={254}
           onChange={(event) => setQuery(event.target.value)}
-          className="min-w-0 flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm sm:min-w-0 sm:flex-1"
         />
         <button disabled={busy} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950 disabled:opacity-50">Search</button>
         <button type="button" disabled={busy} onClick={() => void load(activeQuery)} className="rounded-lg border border-zinc-700 px-3 py-2 text-sm disabled:opacity-50">Refresh</button>

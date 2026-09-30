@@ -35,11 +35,12 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto min-h-dvh max-w-3xl px-4 py-8 pt-[max(2rem,env(safe-area-inset-top))]">
+    <div className="mx-auto min-h-dvh max-w-6xl px-4 py-8 pt-[max(2rem,env(safe-area-inset-top))]">
       <div className="mb-6 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-400">MyTempMail</p>
-          <h1 className="text-2xl font-semibold text-zinc-50">Settings</h1>
+          <h1 className="text-2xl font-semibold text-zinc-50">Settings dashboard</h1>
+          <p className="mt-1 text-sm text-zinc-500">Manage delivery, domains, and guest access in one place.</p>
         </div>
         <div className="flex shrink-0 gap-3 text-sm text-zinc-400">
           <Link href="/" className="hover:text-zinc-100">
