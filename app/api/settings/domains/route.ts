@@ -60,6 +60,7 @@ export async function DELETE(request: NextRequest) {
     if (!name) throw new HttpError("Domain is required");
     const settings = await getSettings();
     settings.domains = settings.domains.filter((d) => d.name !== name);
+    settings.guestDomains = settings.guestDomains.filter((domain) => domain !== name);
     await saveSettings(settings);
     return jsonOk({ ok: true });
   } catch (error) {

@@ -9,6 +9,7 @@ import {
   verifySettingsPassword,
 } from "@/lib/auth";
 import { HttpError } from "@/lib/domains";
+import { isGuestDuration, validateGuestDomains } from "@/lib/guest-policy";
 import { isMockMode } from "@/lib/env";
 import { jsonError, jsonOk } from "@/lib/http";
 import { registerInboundWebhook } from "@/lib/resend";
@@ -33,6 +34,8 @@ function publicSettings(settings: AppSettings) {
     inboxTtlSeconds: settings.inboxTtlSeconds,
     maxMessagesPerInbox: settings.maxMessagesPerInbox,
     domains: settings.domains,
+    guestDomains: settings.guestDomains,
+    guestAccessDuration: settings.guestAccessDuration,
   };
 }
 
@@ -52,6 +55,8 @@ export async function PUT(request: NextRequest) {
   try {
     await requireSettingsAuth();
     const body = (await request.json()) as {
+      guestDomains?: unknown;
+      guestAccessDuration?: unknown;
       resendApiKey?: string;
       resendWebhookSecret?: string;
       appUrl?: string;
@@ -59,8 +64,13 @@ export async function PUT(request: NextRequest) {
       maxMessagesPerInbox?: number;
     };
     const current = await getSettings();
+    if (body.guestAccessDuration !== undefined && !isGuestDuration(body.guestAccessDuration)) {
+      throw new HttpError("Invalid guest access duration");
+    }
     const next: AppSettings = {
       ...current,
+      guestDomains: body.guestDomains === undefined ? current.guestDomains : validateGuestDomains(body.guestDomains, current),
+      guestAccessDuration: body.guestAccessDuration ?? current.guestAccessDuration,
       resendApiKey: body.resendApiKey?.trim() || current.resendApiKey,
       resendWebhookSecret: body.resendWebhookSecret?.trim() || current.resendWebhookSecret,
       appUrl: body.appUrl?.trim() || current.appUrl,

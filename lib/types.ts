@@ -1,3 +1,5 @@
+import type { GuestDuration } from "@/lib/guest-policy";
+
 export type AttachmentMeta = {
   id: string;
   filename: string;
@@ -49,6 +51,8 @@ export type AppSettings = {
   resendWebhookSecret: string;
   resendWebhookId: string;
   domains: ManagedDomain[];
+  guestDomains: string[];
+  guestAccessDuration: GuestDuration;
   inboxTtlSeconds: number;
   maxMessagesPerInbox: number;
   appUrl: string;
@@ -56,6 +60,8 @@ export type AppSettings = {
 
 export type PublicConfig = {
   domains: string[];
+  guestDomains: string[];
+  guestAccessDuration: GuestDuration;
   inboxTtlSeconds: number;
   mockMode: boolean;
   accessEnabled: boolean;

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { signGuestToken, verifyGuestToken } from "@/lib/guest-session";
 import { isGuestAllowedRequest, isAlwaysPublicPath } from "@/lib/guest-paths";
 import { dummyVerify, generateGuestPassword, hashPassword, verifyPassword } from "@/lib/passwords";
-import { GUEST_SESSION_SECONDS, SHARE_TTL_SECONDS, guestSessionMaxAgeSeconds, isShareActive } from "@/lib/share";
+import { guestSessionMaxAgeSeconds, isShareActive } from "@/lib/share";
+import { guestAccessExpiresAt, isGuestDuration } from "@/lib/guest-policy";
 import { formatCountdown } from "@/lib/utils";
 
 describe("guest passwords", () => {
@@ -46,12 +47,10 @@ describe("guest session cookie", () => {
 });
 
 describe("guest clocks", () => {
-  it("allows up to three days while never outliving the guest password", () => {
+  it("lasts until the guest password expires, including long grants", () => {
     const threeDays = 3 * 24 * 3600;
-    expect(SHARE_TTL_SECONDS).toBe(threeDays);
-    expect(GUEST_SESSION_SECONDS).toBe(threeDays);
     const now = 1_700_000_000_000;
-    expect(guestSessionMaxAgeSeconds(now + 4 * 24 * 3600 * 1000, now)).toBe(threeDays);
+    expect(guestSessionMaxAgeSeconds(now + 30 * 24 * 3600 * 1000, now)).toBe(30 * 24 * 3600);
     expect(guestSessionMaxAgeSeconds(now + 10 * 60 * 1000, now)).toBe(600);
     expect(guestSessionMaxAgeSeconds(now - 1000, now)).toBe(0);
     expect(formatCountdown(threeDays * 1000)).toBe("3d 0h");
@@ -86,5 +85,25 @@ describe("guest path policy", () => {
     expect(isGuestAllowedRequest("DELETE", "/api/inbox")).toBe(false);
     expect(isGuestAllowedRequest("POST", "/api/send")).toBe(false);
     expect(isGuestAllowedRequest("POST", "/api/share")).toBe(false);
+  });
+});
+
+
+describe("guest duration options", () => {
+  it.each([["1d", 1], ["3d", 3], ["7d", 7], ["30d", 30]] as const)("expires %s after the chosen days", (duration, days) => {
+    const now = Date.UTC(2026, 8, 30, 12);
+    expect(guestAccessExpiresAt(duration, now)).toBe(now + days * 86400_000);
+  });
+
+  it.each([
+    ["2026-08-31T12:30:00.000Z", "2027-02-28T12:30:00.000Z"],
+    ["2027-08-31T12:30:00.000Z", "2028-02-29T12:30:00.000Z"],
+    ["2026-09-30T12:30:00.000Z", "2027-03-30T12:30:00.000Z"],
+  ])("adds six calendar months to %s", (start, expected) => {
+    expect(new Date(guestAccessExpiresAt("6m", Date.parse(start))).toISOString()).toBe(expected);
+  });
+
+  it("rejects unsupported duration values", () => {
+    for (const value of [0, -1, "365d", null, {}, "", "3"]) expect(isGuestDuration(value)).toBe(false);
   });
 });

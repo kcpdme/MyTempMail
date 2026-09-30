@@ -1,5 +1,6 @@
 import { accessRequired } from "@/lib/access";
 import { defaultDomainsFromEnv, isMockMode, parsePositiveInt } from "@/lib/env";
+import { DEFAULT_GUEST_DURATION, guestDomainAllowlist, isGuestDuration } from "@/lib/guest-policy";
 import { getStore } from "@/lib/store";
 import type { AppSettings, ManagedDomain, PublicConfig } from "@/lib/types";
 
@@ -25,6 +26,8 @@ function envDefaults(): AppSettings {
     resendWebhookSecret: process.env.RESEND_WEBHOOK_SECRET?.trim() ?? "",
     resendWebhookId: "",
     domains,
+    guestDomains: [],
+    guestAccessDuration: DEFAULT_GUEST_DURATION,
     inboxTtlSeconds: parsePositiveInt(process.env.INBOX_TTL_SECONDS, 86400),
     maxMessagesPerInbox: parsePositiveInt(process.env.MAX_MESSAGES_PER_INBOX, 50),
     appUrl: process.env.APP_URL?.trim() || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ""),
@@ -42,6 +45,8 @@ function overlay(base: AppSettings, stored: Partial<AppSettings> | null): AppSet
     resendWebhookSecret: stored.resendWebhookSecret || base.resendWebhookSecret,
     resendWebhookId: stored.resendWebhookId || base.resendWebhookId,
     domains,
+    guestDomains: stored.guestDomains ?? base.guestDomains,
+    guestAccessDuration: isGuestDuration(stored.guestAccessDuration) ? stored.guestAccessDuration : base.guestAccessDuration,
     inboxTtlSeconds: stored.inboxTtlSeconds || base.inboxTtlSeconds,
     maxMessagesPerInbox: stored.maxMessagesPerInbox || base.maxMessagesPerInbox,
     appUrl: stored.appUrl || base.appUrl,
@@ -67,6 +72,8 @@ export async function saveSettings(next: AppSettings): Promise<AppSettings> {
 export function publicConfig(settings: AppSettings): PublicConfig {
   return {
     domains: settings.domains.map((d) => d.name),
+    guestDomains: guestDomainAllowlist(settings),
+    guestAccessDuration: settings.guestAccessDuration,
     inboxTtlSeconds: settings.inboxTtlSeconds,
     mockMode: isMockMode(),
     accessEnabled: accessRequired(),

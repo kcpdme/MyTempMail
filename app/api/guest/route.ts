@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { ACCESS_COOKIE, accessPassword, accessRequired } from "@/lib/access";
-import { assertDisposableAddress, domainAllowlist, HttpError } from "@/lib/domains";
+import { assertDisposableAddress, HttpError } from "@/lib/domains";
+import { guestDomainAllowlist } from "@/lib/guest-policy";
 import { GUEST_COOKIE, guestCookieOptions, signGuestToken } from "@/lib/guest-session";
 import { jsonError, jsonOk } from "@/lib/http";
 import { dummyVerify, verifyPassword } from "@/lib/passwords";
@@ -31,8 +32,8 @@ export async function POST(request: NextRequest) {
       throw new HttpError("Guest login is only used when the workspace is locked.", 400);
     }
 
-    const settings = await getSettings();
-    const parsed = assertDisposableAddress(body.email ?? "", domainAllowlist(settings.domains));
+    const settings = await getSettings({ fresh: true });
+    const parsed = assertDisposableAddress(body.email ?? "", guestDomainAllowlist(settings));
     const share = await getStore().getShare(parsed.email);
     if (!isShareActive(share)) {
       await dummyVerify(body.password ?? "");

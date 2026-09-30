@@ -1,7 +1,5 @@
 import type { ShareRecord } from "@/lib/types";
 
-export const SHARE_TTL_SECONDS = 3 * 24 * 60 * 60;
-export const GUEST_SESSION_SECONDS = SHARE_TTL_SECONDS;
 export const MIN_GUEST_PASSWORD_LENGTH = 8;
 export const MAX_GUEST_PASSWORD_LENGTH = 64;
 
@@ -15,9 +13,7 @@ export function isShareActive(record: ShareRecord | null | undefined, now = Date
 }
 
 export function guestSessionMaxAgeSeconds(shareExpiresAt: number, now = Date.now()): number {
-  const sessionEnd = now + GUEST_SESSION_SECONDS * 1000;
-  const end = Math.min(sessionEnd, shareExpiresAt);
-  return Math.max(0, Math.floor((end - now) / 1000));
+  return Math.max(0, Math.floor((shareExpiresAt - now) / 1000));
 }
 
 export function publicShareStatus(record: ShareRecord | null | undefined, now = Date.now()) {

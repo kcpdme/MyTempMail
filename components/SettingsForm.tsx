@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { DomainCard } from "@/components/DomainRecords";
+import { GUEST_DURATIONS, type GuestDuration } from "@/lib/guest-policy";
 import type { ManagedDomain } from "@/lib/types";
 
 export type SettingsPayload = {
@@ -14,6 +15,8 @@ export type SettingsPayload = {
   inboxTtlSeconds: number;
   maxMessagesPerInbox: number;
   domains: ManagedDomain[];
+  guestDomains: string[];
+  guestAccessDuration: GuestDuration;
 };
 
 export function SettingsForm({
@@ -23,6 +26,12 @@ export function SettingsForm({
   initial: SettingsPayload;
   onReload: () => Promise<void>;
 }) {
+  const [guestDomains, setGuestDomains] = useState(initial.guestDomains);
+  const [guestDuration, setGuestDuration] = useState(initial.guestAccessDuration);
+  useEffect(() => {
+    setGuestDomains(initial.guestDomains);
+    setGuestDuration(initial.guestAccessDuration);
+  }, [initial.guestDomains, initial.guestAccessDuration]);
   const [apiKey, setApiKey] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [appUrl, setAppUrl] = useState(initial.appUrl);
@@ -41,6 +50,8 @@ export function SettingsForm({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          guestDomains: guestDomains.filter((name) => initial.domains.some((domain) => domain.name === name)),
+          guestAccessDuration: guestDuration,
           resendApiKey: apiKey || undefined,
           resendWebhookSecret: webhookSecret || undefined,
           appUrl,
@@ -188,6 +199,40 @@ export function SettingsForm({
             <input value={max} onChange={(e) => setMax(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-base md:text-sm" />
           </label>
         </div>
+        <fieldset className="space-y-3 border-t border-zinc-800 pt-4">
+          <legend className="px-1 text-base font-semibold text-zinc-50">Guest access</legend>
+          <p className="text-sm text-zinc-400">
+            Choose the guest email domains shown on the login page. Only selected domains allow guest access.
+            Deselecting a domain also ends its existing guest sessions.
+          </p>
+          <div className="space-y-2" role="group" aria-label="Guest email domains">
+            {initial.domains.map((domain) => (
+              <label key={domain.name} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={guestDomains.includes(domain.name)}
+                  onChange={(event) => setGuestDomains((current) => event.target.checked
+                    ? [...current, domain.name]
+                    : current.filter((name) => name !== domain.name))}
+                />
+                {domain.name}
+              </label>
+            ))}
+            {!initial.domains.length && <p className="text-sm text-zinc-500">Add a domain below first.</p>}
+          </div>
+          {!guestDomains.length && <p className="text-sm text-amber-300">Guest login is disabled until you select a domain.</p>}
+          <label className="block text-sm">
+            Default guest access duration
+            <select
+              value={guestDuration}
+              onChange={(event) => setGuestDuration(event.target.value as GuestDuration)}
+              className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+            >
+              {GUEST_DURATIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <p className="text-xs text-zinc-500">Applies to new or rotated passwords. You can choose a different duration when creating access. Six months means six calendar months. Existing expiry dates and inbox message retention stay unchanged.</p>
+        </fieldset>
         <button disabled={busy} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950">
           Save settings
         </button>

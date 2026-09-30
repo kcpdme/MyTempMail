@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { ACCESS_COOKIE, accessPassword, accessRequired, verifyAccessToken } from "@/lib/access";
 import { HttpError } from "@/lib/domains";
+import { guestDomainAllowlist } from "@/lib/guest-policy";
+import { getSettings } from "@/lib/settings";
 import { GUEST_COOKIE, verifyGuestToken } from "@/lib/guest-session";
 import { isShareActive } from "@/lib/share";
 import { getStore } from "@/lib/store";
@@ -17,6 +19,8 @@ export async function readSession(): Promise<SessionInfo> {
   }
   const guest = await verifyGuestToken(jar.get(GUEST_COOKIE)?.value, secret);
   if (!guest) return { role: "none" };
+  const settings = await getSettings({ fresh: true });
+  if (!guestDomainAllowlist(settings).includes(guest.email.split("@")[1])) return { role: "none" };
   const share = await getStore().getShare(guest.email);
   if (!isShareActive(share) || share.version !== guest.version) {
     return { role: "none" };

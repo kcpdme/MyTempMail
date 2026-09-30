@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
 import { assertDisposableAddress, domainAllowlist, HttpError } from "@/lib/domains";
+import { guestAccessExpiresAt, guestDomainAllowlist, isGuestDuration, type GuestDuration } from "@/lib/guest-policy";
 import { jsonError, jsonOk } from "@/lib/http";
 import { generateGuestPassword, hashPassword } from "@/lib/passwords";
 import { requireMember } from "@/lib/session";
 import {
   MAX_GUEST_PASSWORD_LENGTH,
   MIN_GUEST_PASSWORD_LENGTH,
-  SHARE_TTL_SECONDS,
   isShareActive,
   publicShareStatus,
 } from "@/lib/share";
@@ -30,7 +30,7 @@ function resolvePassword(custom: string | undefined): string {
   return trimmed;
 }
 
-async function publishShare(email: string, previous: ShareRecord | null, password: string) {
+async function publishShare(email: string, previous: ShareRecord | null, password: string, duration: GuestDuration) {
   const now = Date.now();
   const { hash, salt } = await hashPassword(password);
   const record: ShareRecord = {
@@ -38,9 +38,9 @@ async function publishShare(email: string, previous: ShareRecord | null, passwor
     salt,
     version: (previous?.version ?? 0) + 1,
     createdAt: now,
-    expiresAt: now + SHARE_TTL_SECONDS * 1000,
+    expiresAt: guestAccessExpiresAt(duration, now),
   };
-  await getStore().putShare(email, record, SHARE_TTL_SECONDS);
+  await getStore().putShare(email, record, Math.ceil((record.expiresAt - now) / 1000));
   return { password, ...publicShareStatus(record) };
 }
 
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await requireMember();
-    const body = (await request.json()) as { email?: string; action?: string; password?: string };
+    const body = (await request.json()) as { email?: string; action?: string; password?: string; duration?: unknown };
     const parsed = await parsedEmail(body.email ?? "");
     const store = getStore();
     const existing = await store.getShare(parsed.email);
@@ -69,12 +69,19 @@ export async function POST(request: NextRequest) {
       return jsonOk({ enabled: false });
     }
 
+    const settings = await getSettings({ fresh: true });
+    if (!guestDomainAllowlist(settings).includes(parsed.domain)) {
+      throw new HttpError("Enable this domain in Settings → Guest email domains first.", 403);
+    }
+    const duration = body.duration ?? settings.guestAccessDuration;
+    if (!isGuestDuration(duration)) throw new HttpError("Invalid guest access duration");
+
     if (action === "create") {
       if (isShareActive(existing)) {
         throw new HttpError("Guest access is already on. Rotate to issue a new password.", 409);
       }
       const password = resolvePassword(body.password);
-      return jsonOk(await publishShare(parsed.email, existing, password));
+      return jsonOk(await publishShare(parsed.email, existing, password, duration));
     }
 
     if (action === "rotate") {
@@ -82,7 +89,7 @@ export async function POST(request: NextRequest) {
         throw new HttpError("Create a guest password first.", 400);
       }
       const password = resolvePassword(body.password);
-      return jsonOk(await publishShare(parsed.email, existing, password));
+      return jsonOk(await publishShare(parsed.email, existing, password, duration));
     }
 
     throw new HttpError("Unknown action");

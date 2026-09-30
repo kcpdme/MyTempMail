@@ -44,7 +44,7 @@ function LoginForms() {
       .then((res) => res.json())
       .then((data: PublicConfig) => {
         setConfig(data);
-        setDomain((current) => current || data.domains[0] || "");
+        setDomain((current) => current || data.guestDomains[0] || "");
       })
       .catch(() => undefined);
   }, [params, router]);
@@ -88,7 +88,7 @@ function LoginForms() {
     router.replace("/");
   }
 
-  const domains = config?.domains ?? [];
+  const domains = config?.guestDomains ?? [];
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-5xl flex-col justify-center px-4 py-[max(1.5rem,env(safe-area-inset-top))]">
@@ -137,7 +137,7 @@ function LoginForms() {
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-400/80">Guest login</p>
             <h2 className="mt-1 text-xl font-semibold text-zinc-50">Read inbox</h2>
-            <p className="mt-1 text-sm text-zinc-500">Receive-only. Access lasts up to 3 days.</p>
+            <p className="mt-1 text-sm text-zinc-500">Receive-only. Access expires at the time set by the inbox owner.</p>
           </div>
           <form onSubmit={submitGuest} className="space-y-3">
             <div className="flex overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
@@ -155,6 +155,7 @@ function LoginForms() {
                 <>
                   <span className="flex items-center text-zinc-500">@</span>
                   <select
+                    aria-label="Guest email domain"
                     value={domain}
                     onChange={(e) => setDomain(e.target.value)}
                     className="max-w-[42%] bg-transparent px-2 text-sm text-zinc-200 outline-none"
@@ -176,7 +177,8 @@ function LoginForms() {
               autoComplete="current-password"
             />
             {guestError && <p className="text-sm text-red-400">{guestError}</p>}
-            <Button className="w-full" variant="secondary">
+            {config && domains.length === 0 && <p className="text-sm text-zinc-500">Guest access is not available. Contact the inbox owner.</p>}
+            <Button className="w-full" variant="secondary" disabled={!domains.length}>
               Open inbox
             </Button>
           </form>

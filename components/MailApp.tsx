@@ -81,15 +81,14 @@ export function MailApp() {
 
   useEffect(() => {
     if (!isGuest || !session?.sessionExpiresAt) return;
-    const ms = session.sessionExpiresAt - Date.now();
-    if (ms <= 0) {
-      window.location.assign("/login?reason=session");
-      return;
-    }
-    const id = window.setTimeout(() => {
-      window.location.assign("/login?reason=session");
-    }, ms);
-    return () => window.clearTimeout(id);
+    // Long grants exceed the browser's ~24.8-day timeout limit. Check expiry in bounded intervals.
+    const expiresAt = session.sessionExpiresAt;
+    const checkExpiry = () => {
+      if (Date.now() >= expiresAt) window.location.assign("/login?reason=session");
+    };
+    checkExpiry();
+    const id = window.setInterval(checkExpiry, 1000);
+    return () => window.clearInterval(id);
   }, [isGuest, session?.sessionExpiresAt]);
 
   useEffect(() => {
@@ -359,6 +358,8 @@ export function MailApp() {
             open={shareOpen}
             email={active}
             status={share.status}
+            defaultDuration={config.guestAccessDuration}
+            domainEnabled={config.guestDomains.includes(active.split("@")[1])}
             onClose={() => setShareOpen(false)}
             onUpdated={(next) => {
               share.setStatus({ enabled: next.enabled, createdAt: next.createdAt, expiresAt: next.expiresAt });
