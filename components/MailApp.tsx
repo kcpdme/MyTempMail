@@ -41,7 +41,7 @@ function playChime() {
 }
 
 export function MailApp() {
-  const { config, error: configError } = useConfig();
+  const { config, error: configError, reload: reloadConfig } = useConfig();
   const { session, error: sessionError } = useSession();
   const isGuest = session?.role === "guest";
   const domains = config?.domains ?? [];
@@ -269,7 +269,9 @@ export function MailApp() {
             onRandomize={generate}
             onAddInbox={addAddress}
             onCompose={isGuest ? undefined : () => openComposer("compose")}
-            onOpenShare={isGuest ? undefined : () => setShareOpen(true)}
+            onOpenShare={isGuest ? undefined : () => {
+              void reloadConfig().then((latest) => { if (latest) setShareOpen(true); });
+            }}
             onLogout={config.accessEnabled || isGuest ? logout : undefined}
           />
           {inbox.error && <div className="bg-red-500/10 px-4 py-2 text-sm text-red-300">{inbox.error}</div>}

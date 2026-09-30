@@ -28,7 +28,7 @@ export async function readSession(): Promise<SessionInfo> {
   return {
     role: "guest",
     email: guest.email,
-    sessionExpiresAt: guest.exp,
+    sessionExpiresAt: Math.min(guest.exp, share.expiresAt),
     shareExpiresAt: share.expiresAt,
   };
 }

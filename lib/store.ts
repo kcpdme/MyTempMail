@@ -2,7 +2,7 @@ import { getRedis } from "@/lib/redis";
 import { isMockMode } from "@/lib/env";
 import { toSummary } from "@/lib/normalize";
 import { isShareActive, shareKey } from "@/lib/share";
-import type { AppSettings, InboxSummary, ShareRecord, StoredMessage } from "@/lib/types";
+import type { AppSettings, GuestAccessPage, InboxSummary, ShareRecord, StoredMessage } from "@/lib/types";
 
 const SETTINGS_KEY = "app:settings";
 const MAX_DEFAULT = 50;
@@ -28,6 +28,8 @@ export type MailStore = {
   clearInbox(email: string): Promise<void>;
   getRawSettings(): Promise<Partial<AppSettings> | null>;
   saveRawSettings(settings: AppSettings): Promise<void>;
+  listShares(query: string, cursor: string): Promise<GuestAccessPage>;
+  updateShareExpiry(email: string, expiresAt: number): Promise<boolean>;
   getShare(email: string): Promise<ShareRecord | null>;
   putShare(email: string, record: ShareRecord, ttlSeconds: number): Promise<void>;
   deleteShare(email: string): Promise<void>;
@@ -124,6 +126,23 @@ class MemoryStore implements MailStore {
     this.state.settings = settings;
   }
 
+  async listShares(query: string, cursor: string): Promise<GuestAccessPage> {
+    const entries = [...this.state.shares.entries()]
+      .filter(([key, record]) => key.slice(6).includes(query) && isShareActive(record))
+      .map(([key, record]) => ({ email: key.slice(6), createdAt: record.createdAt, expiresAt: record.expiresAt }))
+      .sort((a, b) => a.email.localeCompare(b.email));
+    const offset = Number(cursor);
+    return { entries: entries.slice(offset, offset + 50), nextCursor: offset + 50 < entries.length ? String(offset + 50) : null };
+  }
+
+  async updateShareExpiry(email: string, expiresAt: number): Promise<boolean> {
+    const key = shareKey(email);
+    const record = this.state.shares.get(key);
+    if (!isShareActive(record)) return false;
+    this.state.shares.set(key, { ...record, expiresAt });
+    return true;
+  }
+
   async getShare(email: string): Promise<ShareRecord | null> {
     const record = this.state.shares.get(shareKey(email)) ?? null;
     if (!isShareActive(record)) {
@@ -209,6 +228,44 @@ class RedisStore implements MailStore {
 
   async saveRawSettings(settings: AppSettings): Promise<void> {
     await this.redis.set(SETTINGS_KEY, settings);
+  }
+
+  async listShares(query: string, cursor: string): Promise<GuestAccessPage> {
+    // SCAN also discovers grants created before the admin list existed.
+    // Escape Redis glob syntax so search is a literal email substring.
+    const escaped = query.replace(/[?*\[\]\\]/g, "\\$&");
+    const entries: GuestAccessPage["entries"] = [];
+    const seen = new Set<string>();
+    let next = cursor;
+    for (let batch = 0; batch < 10; batch++) {
+      const [nextCursor, keys] = await this.redis.scan(next, { match: `share:*${escaped}*`, count: 100 });
+      next = nextCursor;
+      if (keys.length) {
+        const records = await this.redis.mget<(ShareRecord | null)[]>(...keys);
+        for (const [index, record] of records.entries()) {
+          if (!isShareActive(record) || seen.has(keys[index])) continue;
+          seen.add(keys[index]);
+          entries.push({ email: keys[index].slice(6), createdAt: record.createdAt, expiresAt: record.expiresAt });
+        }
+      }
+      if (next === "0" || entries.length >= 50) break;
+    }
+    return { entries: entries.sort((a, b) => a.email.localeCompare(b.email)), nextCursor: next === "0" ? null : next };
+  }
+
+  async updateShareExpiry(email: string, expiresAt: number): Promise<boolean> {
+    // Read and update atomically: a concurrent revoke must never be undone,
+    // and a concurrent password rotation must keep its new hash and version.
+    const updated = await this.redis.eval(`
+      local raw = redis.call('GET', KEYS[1])
+      if not raw then return 0 end
+      local record = cjson.decode(raw)
+      if record.expiresAt <= tonumber(ARGV[1]) then return 0 end
+      record.expiresAt = tonumber(ARGV[2])
+      redis.call('SET', KEYS[1], cjson.encode(record), 'PXAT', ARGV[2])
+      return 1
+    `, [shareKey(email)], [Date.now(), expiresAt]);
+    return updated === 1;
   }
 
   async getShare(email: string): Promise<ShareRecord | null> {

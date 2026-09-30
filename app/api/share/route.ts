@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import { NextRequest } from "next/server";
 import { assertDisposableAddress, domainAllowlist, HttpError } from "@/lib/domains";
 import { guestAccessExpiresAt, guestDomainAllowlist, isGuestDuration, type GuestDuration } from "@/lib/guest-policy";
@@ -36,7 +37,7 @@ async function publishShare(email: string, previous: ShareRecord | null, passwor
   const record: ShareRecord = {
     hash,
     salt,
-    version: (previous?.version ?? 0) + 1,
+    version: previous ? previous.version + 1 : randomInt(1, 2 ** 40),
     createdAt: now,
     expiresAt: guestAccessExpiresAt(duration, now),
   };

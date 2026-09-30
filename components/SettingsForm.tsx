@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { GuestAccessManager } from "@/components/GuestAccessManager";
 import { DomainCard } from "@/components/DomainRecords";
 import { GUEST_DURATIONS, type GuestDuration } from "@/lib/guest-policy";
 import type { ManagedDomain } from "@/lib/types";
@@ -39,6 +41,7 @@ export function SettingsForm({
   const [max, setMax] = useState(String(initial.maxMessagesPerInbox));
   const [domainName, setDomainName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [guestMessage, setGuestMessage] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   async function save(event: FormEvent) {
@@ -50,8 +53,6 @@ export function SettingsForm({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          guestDomains: guestDomains.filter((name) => initial.domains.some((domain) => domain.name === name)),
-          guestAccessDuration: guestDuration,
           resendApiKey: apiKey || undefined,
           resendWebhookSecret: webhookSecret || undefined,
           appUrl,
@@ -67,6 +68,33 @@ export function SettingsForm({
       await onReload();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveGuestSettings(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setGuestMessage(null);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          guestDomains: guestDomains.filter((name) => initial.domains.some((domain) => domain.name === name)),
+          guestAccessDuration: guestDuration,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not save guest settings");
+      await onReload();
+      setGuestMessage("Guest settings saved.");
+      toast.success("Guest settings saved");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not save guest settings";
+      setGuestMessage(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -199,7 +227,15 @@ export function SettingsForm({
             <input value={max} onChange={(e) => setMax(e.target.value)} className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-base md:text-sm" />
           </label>
         </div>
-        <fieldset className="space-y-3 border-t border-zinc-800 pt-4">
+
+        <button disabled={busy} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950">
+          Save settings
+        </button>
+        {message && <p role="status" className="text-sm text-emerald-300">{message}</p>}
+      </form>
+
+      <form onSubmit={saveGuestSettings} className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
+        <fieldset className="space-y-3">
           <legend className="px-1 text-base font-semibold text-zinc-50">Guest access</legend>
           <p className="text-sm text-zinc-400">
             Choose the guest email domains shown on the login page. Only selected domains allow guest access.
@@ -233,10 +269,11 @@ export function SettingsForm({
           </label>
           <p className="text-xs text-zinc-500">Applies to new or rotated passwords. You can choose a different duration when creating access. Six months means six calendar months. Existing expiry dates and inbox message retention stay unchanged.</p>
         </fieldset>
-        <button disabled={busy} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950">
-          Save settings
-        </button>
+        <button disabled={busy} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950 disabled:opacity-50">{busy ? "Saving…" : "Save guest settings"}</button>
+        {guestMessage && <p role="status" className="text-sm text-emerald-300">{guestMessage}</p>}
       </form>
+
+      <GuestAccessManager defaultDuration={initial.guestAccessDuration} guestDomains={initial.guestDomains} />
 
       <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
         <h2 className="text-lg font-semibold text-zinc-50">Domains</h2>
@@ -278,7 +315,6 @@ export function SettingsForm({
           ))}
         </div>
       </section>
-      {message && <p className="text-sm text-emerald-300">{message}</p>}
     </div>
   );
 }

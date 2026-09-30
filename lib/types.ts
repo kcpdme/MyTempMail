@@ -106,3 +106,14 @@ export type IncomingEmail = {
   receivedAt: string;
   attachments: AttachmentMeta[];
 };
+
+export type GuestAccessEntry = {
+  email: string;
+  createdAt: number;
+  expiresAt: number;
+};
+
+export type GuestAccessPage = {
+  entries: GuestAccessEntry[];
+  nextCursor: string | null;
+};

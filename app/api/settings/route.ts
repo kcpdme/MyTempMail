@@ -44,7 +44,7 @@ export async function GET() {
     if (!(await isSettingsAuthed())) {
       return jsonError(new HttpError("Unauthorized", 401));
     }
-    const settings = await getSettings();
+    const settings = await getSettings({ fresh: true });
     return jsonOk(publicSettings(settings));
   } catch (error) {
     return jsonError(error);
@@ -63,7 +63,7 @@ export async function PUT(request: NextRequest) {
       inboxTtlSeconds?: number;
       maxMessagesPerInbox?: number;
     };
-    const current = await getSettings();
+    const current = await getSettings({ fresh: true });
     if (body.guestAccessDuration !== undefined && !isGuestDuration(body.guestAccessDuration)) {
       throw new HttpError("Invalid guest access duration");
     }
@@ -78,11 +78,13 @@ export async function PUT(request: NextRequest) {
       maxMessagesPerInbox: body.maxMessagesPerInbox || current.maxMessagesPerInbox,
     };
 
-    if (next.appUrl) {
+    const updateMailIntegration = body.resendApiKey !== undefined || body.resendWebhookSecret !== undefined || body.appUrl !== undefined;
+
+    if (updateMailIntegration && next.appUrl) {
       next.appUrl = await resolveCanonicalAppUrl(next.appUrl);
     }
 
-    if (next.resendApiKey && next.appUrl && !isMockMode()) {
+    if (updateMailIntegration && next.resendApiKey && next.appUrl && !isMockMode()) {
       const hook = await registerInboundWebhook(next.resendApiKey, next.appUrl, {
         id: next.resendWebhookId,
         hasSecret: Boolean(next.resendWebhookSecret),

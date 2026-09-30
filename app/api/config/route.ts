@@ -10,7 +10,9 @@ export async function GET() {
     const config = publicConfig(settings);
     const session = await readSession();
     if (session.role !== "member") config.domains = config.guestDomains;
-    return jsonOk(config);
+    const response = jsonOk(config);
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
   } catch (error) {
     return jsonError(error);
   }

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     await requireSettingsAuth();
     const body = (await request.json()) as { name?: string; sync?: boolean };
-    const settings = await getSettings();
+    const settings = await getSettings({ fresh: true });
 
     if (body.sync) {
       if (isMockMode() || !settings.resendApiKey) {
@@ -58,7 +58,7 @@ export async function DELETE(request: NextRequest) {
     await requireSettingsAuth();
     const name = request.nextUrl.searchParams.get("name")?.trim().toLowerCase();
     if (!name) throw new HttpError("Domain is required");
-    const settings = await getSettings();
+    const settings = await getSettings({ fresh: true });
     settings.domains = settings.domains.filter((d) => d.name !== name);
     settings.guestDomains = settings.guestDomains.filter((domain) => domain !== name);
     await saveSettings(settings);
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     await requireSettingsAuth();
     const id = request.nextUrl.searchParams.get("id");
     if (!id) throw new HttpError("Domain id is required");
-    const settings = await getSettings();
+    const settings = await getSettings({ fresh: true });
     if (!settings.resendApiKey) throw new HttpError("Resend API key is not set", 400);
     const domain = await refreshResendDomain(settings.resendApiKey, id);
     settings.domains = settings.domains.map((d) => (d.resendId === id ? { ...d, ...domain } : d));

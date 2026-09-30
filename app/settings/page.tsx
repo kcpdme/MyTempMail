@@ -11,7 +11,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/settings");
+    const res = await fetch("/api/settings", { cache: "no-store" });
     if (res.status === 401) {
       router.replace("/settings/login");
       return;

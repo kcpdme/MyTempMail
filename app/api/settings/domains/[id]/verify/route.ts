@@ -13,7 +13,7 @@ export async function POST(
   try {
     await requireSettingsAuth();
     const { id } = await context.params;
-    const settings = await getSettings();
+    const settings = await getSettings({ fresh: true });
     if (!settings.resendApiKey) throw new HttpError("Resend API key is not set", 400);
     await verifyResendDomain(settings.resendApiKey, id);
     const domain = await refreshResendDomain(settings.resendApiKey, id);
