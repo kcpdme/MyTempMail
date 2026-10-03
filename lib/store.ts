@@ -1,10 +1,10 @@
-import { getRedis } from "@/lib/redis";
+import { getTurso } from "@/lib/turso";
+import { TursoStore } from "@/lib/turso-store";
 import { isMockMode } from "@/lib/env";
 import { toSummary } from "@/lib/normalize";
 import { isShareActive, shareKey } from "@/lib/share";
 import type { AppSettings, GuestAccessPage, InboxSummary, ShareRecord, StoredMessage } from "@/lib/types";
 
-const SETTINGS_KEY = "app:settings";
 const MAX_DEFAULT = 50;
 const TTL_DEFAULT = 86400;
 
@@ -162,136 +162,11 @@ class MemoryStore implements MailStore {
   }
 }
 
-class RedisStore implements MailStore {
-  private redis = getRedis();
-
-  async listInbox(email: string): Promise<InboxSummary[]> {
-    const list = await this.redis.get<InboxSummary[]>(inboxKey(email));
-    return Array.isArray(list) ? list : [];
-  }
-
-  async getMessage(email: string, id: string): Promise<StoredMessage | null> {
-    const message = await this.redis.get<StoredMessage>(messageKey(email, id));
-    return message ?? null;
-  }
-
-  async saveMessage(
-    email: string,
-    message: StoredMessage,
-    opts: { ttlSeconds: number; maxMessages: number },
-  ): Promise<void> {
-    const ttl = opts.ttlSeconds || TTL_DEFAULT;
-    const max = opts.maxMessages || MAX_DEFAULT;
-    const listKey = inboxKey(email);
-    const existing = (await this.redis.get<InboxSummary[]>(listKey)) ?? [];
-    const list = existing.filter((m) => m.id !== message.id);
-    list.unshift(toSummary(message));
-    const trimmed = list.slice(0, max);
-    const dropped = list.slice(max);
-    const pipe = this.redis.pipeline();
-    pipe.set(listKey, trimmed, { ex: ttl });
-    pipe.set(messageKey(email, message.id), message, { ex: ttl });
-    for (const item of dropped) {
-      pipe.del(messageKey(email, item.id));
-    }
-    await pipe.exec();
-  }
-
-  async deleteMessage(email: string, id: string): Promise<void> {
-    const listKey = inboxKey(email);
-    const existing = (await this.redis.get<InboxSummary[]>(listKey)) ?? [];
-    const next = existing.filter((m) => m.id !== id);
-    const pipe = this.redis.pipeline();
-    if (next.length) {
-      pipe.set(listKey, next, { ex: TTL_DEFAULT });
-    } else {
-      pipe.del(listKey);
-    }
-    pipe.del(messageKey(email, id));
-    await pipe.exec();
-  }
-
-  async clearInbox(email: string): Promise<void> {
-    const listKey = inboxKey(email);
-    const existing = (await this.redis.get<InboxSummary[]>(listKey)) ?? [];
-    const pipe = this.redis.pipeline();
-    pipe.del(listKey);
-    for (const item of existing) {
-      pipe.del(messageKey(email, item.id));
-    }
-    await pipe.exec();
-  }
-
-  async getRawSettings(): Promise<Partial<AppSettings> | null> {
-    return (await this.redis.get<Partial<AppSettings>>(SETTINGS_KEY)) ?? null;
-  }
-
-  async saveRawSettings(settings: AppSettings): Promise<void> {
-    await this.redis.set(SETTINGS_KEY, settings);
-  }
-
-  async listShares(query: string, cursor: string): Promise<GuestAccessPage> {
-    // SCAN also discovers grants created before the admin list existed.
-    // Escape Redis glob syntax so search is a literal email substring.
-    const escaped = query.replace(/[?*\[\]\\]/g, "\\$&");
-    const entries: GuestAccessPage["entries"] = [];
-    const seen = new Set<string>();
-    let next = cursor;
-    for (let batch = 0; batch < 10; batch++) {
-      const [nextCursor, keys] = await this.redis.scan(next, { match: `share:*${escaped}*`, count: 100 });
-      next = nextCursor;
-      if (keys.length) {
-        const records = await this.redis.mget<(ShareRecord | null)[]>(...keys);
-        for (const [index, record] of records.entries()) {
-          if (!isShareActive(record) || seen.has(keys[index])) continue;
-          seen.add(keys[index]);
-          entries.push({ email: keys[index].slice(6), createdAt: record.createdAt, expiresAt: record.expiresAt });
-        }
-      }
-      if (next === "0" || entries.length >= 50) break;
-    }
-    return { entries: entries.sort((a, b) => a.email.localeCompare(b.email)), nextCursor: next === "0" ? null : next };
-  }
-
-  async updateShareExpiry(email: string, expiresAt: number): Promise<boolean> {
-    // Read and update atomically: a concurrent revoke must never be undone,
-    // and a concurrent password rotation must keep its new hash and version.
-    const updated = await this.redis.eval(`
-      local raw = redis.call('GET', KEYS[1])
-      if not raw then return 0 end
-      local record = cjson.decode(raw)
-      if record.expiresAt <= tonumber(ARGV[1]) then return 0 end
-      record.expiresAt = tonumber(ARGV[2])
-      redis.call('SET', KEYS[1], cjson.encode(record), 'PXAT', ARGV[2])
-      return 1
-    `, [shareKey(email)], [Date.now(), expiresAt]);
-    return updated === 1;
-  }
-
-  async getShare(email: string): Promise<ShareRecord | null> {
-    const record = await this.redis.get<ShareRecord>(shareKey(email));
-    if (!record || !isShareActive(record)) {
-      if (record) await this.redis.del(shareKey(email));
-      return null;
-    }
-    return record;
-  }
-
-  async putShare(email: string, record: ShareRecord, ttlSeconds: number): Promise<void> {
-    const ttl = Math.max(1, Math.floor(ttlSeconds));
-    await this.redis.set(shareKey(email), record, { ex: ttl });
-  }
-
-  async deleteShare(email: string): Promise<void> {
-    await this.redis.del(shareKey(email));
-  }
-}
-
 let store: MailStore | null = null;
 
 export function getStore(): MailStore {
   if (store) return store;
-  store = isMockMode() ? new MemoryStore() : new RedisStore();
+  store = isMockMode() ? new MemoryStore() : new TursoStore(getTurso());
   return store;
 }
 

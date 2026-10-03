@@ -1,15 +1,9 @@
 export function isMockMode(): boolean {
   if (process.env.MOCK_MODE === "1") return true;
-  if (process.env.MOCK_MODE === "0") return false;
-  return !redisUrl() || !redisToken();
-}
-
-export function redisUrl(): string | undefined {
-  return process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-}
-
-export function redisToken(): string | undefined {
-  return process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  if (process.env.MOCK_MODE === "0" || process.env.NODE_ENV === "production" || process.env.VERCEL) return false;
+  // Partial/legacy configuration must fail visibly, never silently lose mail in memory.
+  return !process.env.TURSO_DATABASE_URL && !process.env.TURSO_AUTH_TOKEN &&
+    !process.env.UPSTASH_REDIS_REST_URL && !process.env.KV_REST_API_URL;
 }
 
 export function settingsSecret(): string {

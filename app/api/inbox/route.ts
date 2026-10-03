@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
           allowlist: domainAllowlist(settings.domains),
         });
       } catch {
-        /* Redis list still returned below */
+        /* Stored inbox still returned below */
       }
     }
     const messages = await getStore().listInbox(parsed.email);

@@ -1,0 +1,9 @@
+.env*
+!.env.example
+.vercel
+.git
+node_modules
+.next
+*.db
+*.db-wal
+*.db-shm

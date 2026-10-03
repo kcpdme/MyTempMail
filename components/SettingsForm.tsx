@@ -271,7 +271,7 @@ export function SettingsForm({
           </div>
           {activeTab === "app" && <form onSubmit={save} className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
             <p className="text-sm text-zinc-400">
-              Env values are defaults. Saving here writes Redis and does not require a redeploy.
+              Env values are defaults. Saving here updates the database and does not require a redeploy.
               {initial.mockMode ? " Mock mode is on — sends are stubbed." : ""}
             </p>
             <label className="block text-sm">

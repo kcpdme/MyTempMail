@@ -1,46 +1,36 @@
-import { Ratelimit } from "@upstash/ratelimit";
+import { createHash } from "node:crypto";
+import type { DatabaseClient } from "@/lib/database";
 import { isMockMode } from "@/lib/env";
-import { getRedis } from "@/lib/redis";
+import { getTurso } from "@/lib/turso";
 
-let sendLimiter: Ratelimit | null = null;
-let guestLimiter: Ratelimit | null = null;
+const WINDOW_MS = 10 * 60 * 1000;
 
-function getSendLimiter(): Ratelimit | null {
-  if (isMockMode()) return null;
-  if (sendLimiter) return sendLimiter;
-  sendLimiter = new Ratelimit({
-    redis: getRedis(),
-    limiter: Ratelimit.slidingWindow(10, "10 m"),
-    prefix: "rl:send",
-    analytics: false,
-  });
-  return sendLimiter;
-}
-
-function getGuestLimiter(): Ratelimit | null {
-  if (isMockMode()) return null;
-  if (guestLimiter) return guestLimiter;
-  guestLimiter = new Ratelimit({
-    redis: getRedis(),
-    limiter: Ratelimit.slidingWindow(5, "10 m"),
-    prefix: "rl:guest",
-    analytics: false,
-  });
-  return guestLimiter;
+export async function consumeRateLimit(db: DatabaseClient, scope: "send" | "guest", ip: string, now = Date.now()): Promise<{ ok: boolean; remaining: number }> {
+  const limit = scope === "send" ? 10 : 5;
+  const bucket = `${scope}:${createHash("sha256").update(ip || "unknown").digest("hex")}`;
+  // A single write transaction serializes the count and insert across all
+  // Vercel instances. Denied attempts cannot grow the table indefinitely.
+  const results = await db.batch([
+    { sql: "DELETE FROM rate_events WHERE bucket = ? AND expires_at <= ?", args: [bucket, now] },
+    {
+      sql: `INSERT INTO rate_events (bucket, expires_at)
+        SELECT ?, ? WHERE (SELECT COUNT(*) FROM rate_events WHERE bucket = ?) < ?`,
+      args: [bucket, now + WINDOW_MS, bucket, limit],
+    },
+    { sql: "SELECT COUNT(*) AS used FROM rate_events WHERE bucket = ?", args: [bucket] },
+    { sql: "DELETE FROM rate_events WHERE id IN (SELECT id FROM rate_events WHERE expires_at <= ? LIMIT 100)", args: [now] },
+  ], "write");
+  return { ok: results[1].rowsAffected === 1, remaining: Math.max(0, limit - Number(results[2].rows[0].used)) };
 }
 
 export async function limitSend(ip: string): Promise<{ ok: boolean; remaining: number }> {
-  const rl = getSendLimiter();
-  if (!rl) return { ok: true, remaining: 10 };
-  const result = await rl.limit(ip || "unknown");
-  return { ok: result.success, remaining: result.remaining };
+  if (isMockMode()) return { ok: true, remaining: 10 };
+  return consumeRateLimit(getTurso(), "send", ip);
 }
 
 export async function limitGuestLogin(ip: string): Promise<{ ok: boolean; remaining: number }> {
-  const rl = getGuestLimiter();
-  if (!rl) return { ok: true, remaining: 5 };
-  const result = await rl.limit(ip || "unknown");
-  return { ok: result.success, remaining: result.remaining };
+  if (isMockMode()) return { ok: true, remaining: 5 };
+  return consumeRateLimit(getTurso(), "guest", ip);
 }
 
 export function clientIp(request: Request): string {

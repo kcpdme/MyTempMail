@@ -27,3 +27,8 @@ next-env.d.ts
 /AGENTS.md
 /CLAUDE.md
 /.vercel/
+
+# local database development
+*.db
+*.db-shm
+*.db-wal

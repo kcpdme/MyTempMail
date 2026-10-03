@@ -10,7 +10,14 @@ function stripSlash(pathname: string): string {
 
 export async function proxy(request: NextRequest) {
   const path = stripSlash(request.nextUrl.pathname);
-  if (path === "/api/webhooks/resend") {
+  // During cutover, fail webhook deliveries so Resend retries after migration.
+  if (process.env.STORAGE_MAINTENANCE === "1") {
+    return NextResponse.json({ error: "Storage migration in progress. Please retry shortly." }, {
+      status: 503, headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+    });
+  }
+  // Cron authenticates with CRON_SECRET inside its route, independently of cookies.
+  if (path === "/api/webhooks/resend" || path === "/api/cron/cleanup") {
     return NextResponse.next();
   }
 

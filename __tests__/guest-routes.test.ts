@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import * as auth from "@/lib/auth";
+import * as stores from "@/lib/store";
+import { createTestDatabase } from "./helpers/database";
+import type { DatabaseClient } from "@/lib/database";
+import { initializeDatabase } from "@/lib/turso";
+import { TursoStore } from "@/lib/turso-store";
 import * as resend from "@/lib/resend";
 import * as urls from "@/lib/urls";
 import { signAccessToken } from "@/lib/access";
@@ -21,6 +26,8 @@ function request(path: string, body: object, method = "POST") {
   return new NextRequest(`http://localhost${path}`, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 }
 
+describe.each(["memory", "turso"])("%s persistence", (backend) => {
+let sqlClient: DatabaseClient | undefined;
 beforeEach(async () => {
   vi.stubEnv("MOCK_MODE", "1");
   vi.stubEnv("ACCESS_PASSWORD", "test-member-password");
@@ -30,11 +37,16 @@ beforeEach(async () => {
   vi.stubEnv("VERCEL_URL", "");
   resetStoreForTests();
   invalidateSettingsCache();
+  if (backend === "turso") {
+    sqlClient = await createTestDatabase();
+    await initializeDatabase(sqlClient);
+    vi.spyOn(stores, "getStore").mockReturnValue(new TursoStore(sqlClient));
+  }
   jar.clear();
   jar.set("tm_access", await signAccessToken("test-member-password"));
   await saveSettings({ ...await getSettings(), guestDomains: ["kcpd.edu.pl"], guestAccessDuration: "7d" });
 });
-afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); vi.restoreAllMocks(); });
+afterEach(() => { sqlClient?.close(); sqlClient = undefined; vi.unstubAllEnvs(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("guest access routes", () => {
   it.each(GUEST_DURATIONS)("uses $label for storage, password and cookie expiry", async ({ value }) => {
@@ -211,4 +223,6 @@ it("preserves fresh settings from another instance when saving guest policy", as
   const result = await settings(request("/api/settings", { guestAccessDuration: "30d" }, "PUT"));
   expect(result.status).toBe(200);
   expect((await getSettings()).maxMessagesPerInbox).toBe(99);
+});
+
 });
